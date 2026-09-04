@@ -219,7 +219,7 @@ def test_forbidden_flags_and_skips(tmp_path: Path) -> None:
     assert store.get_message_id(111, "dairy") is None
 
 
-def test_image_is_attached_when_file_exists(tmp_path: Path) -> None:
+def test_image_is_attached_as_thumbnail_when_file_exists(tmp_path: Path) -> None:
     factories_dir = tmp_path / "factories"
     factories_dir.mkdir()
     (factories_dir / "dairy.png").write_bytes(b"\x89PNG\r\n\x1a\n")
@@ -251,7 +251,7 @@ def test_image_is_attached_when_file_exists(tmp_path: Path) -> None:
     assert result.posted == ["🥛 Dairy"]
     message = channel.sent[0]
     assert message.embed is not None
-    assert message.embed.image.url == "attachment://dairy.png"
+    assert message.embed.thumbnail.url == "attachment://dairy.png"
 
 
 def test_first_run_records_the_channel(tmp_path: Path) -> None:

@@ -164,7 +164,7 @@ def build_embed(
     host is needed. A factory with ``image=None``, or whose image file is missing, is
     posted as an embed with no picture rather than raising.
     """
-    lines = [DESCRIPTION_HEADER, ""]
+    lines = []
     for item in factory.items:
         lines.append(f"{emojis_by_name[item.emoji_name]} — {item.role_name}")
 
@@ -183,7 +183,7 @@ def build_embed(
         return embed, None
 
     file = discord.File(path, filename=factory.image)
-    embed.set_image(url=f"attachment://{factory.image}")
+    embed.set_thumbnail(url=f"attachment://{factory.image}")
     return embed, file
 
 
