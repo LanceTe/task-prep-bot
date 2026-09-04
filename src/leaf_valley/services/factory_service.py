@@ -194,7 +194,7 @@ async def seed_reactions(
 ) -> int:
     """Add each item's emoji to ``message`` as a reaction; return the count added.
 
-    Shared by /setup-factories (after posting) and /reset-week (after clearing
+    Shared by /setup-factories (after posting) and /reset (after clearing
     reactions). Re-adding a reaction the bot already placed is a no-op on Discord,
     so this is safe to re-run.
     """
@@ -214,7 +214,7 @@ async def reset_reactions(
 ) -> ReactionResetResult:
     """Clear all reactions on every factory message and re-seed the bot's own.
 
-    Used by /reset-week: ``message.clear_reactions()`` wipes every user's signup in
+    Used by /reset: ``message.clear_reactions()`` wipes every user's signup in
     one call per message, then ``seed_reactions`` restores the board to its initial
     state. Resolves emoji references first (they may have been deleted since setup)
     and aborts before touching anything if any are missing. A tracked message that

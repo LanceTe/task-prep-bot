@@ -303,12 +303,12 @@ class Setup(commands.Cog):
             await interaction.response.send_message(message, ephemeral=True)
 
     @app_commands.command(
-        name="reset-week",
+        name="reset",
         description="Clear every item role from members and wipe reaction signups.",
     )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def reset_week(self, interaction: discord.Interaction) -> None:
+    async def reset(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
             await interaction.response.send_message(
@@ -343,7 +343,7 @@ class Setup(commands.Cog):
 
         view = _ConfirmView(
             interaction.user.id,
-            confirm_label="Reset week",
+            confirm_label="Reset",
             progress_message="Resetting… clearing roles and reactions.",
             cancel_message="Reset cancelled.",
         )
@@ -374,7 +374,7 @@ class Setup(commands.Cog):
         role_result = await clear_all(guild, self.bot.state.managed_role_ids(guild.id))
 
         lines = [
-            f"**Reset week — {guild.name}**",
+            f"**Reset — {guild.name}**",
             f"Roles cleared: {role_result.roles_cleared}",
             f"Members affected: {role_result.members_affected}",
         ]
@@ -415,14 +415,14 @@ class Setup(commands.Cog):
 
         await interaction.edit_original_response(content="\n".join(lines), view=None)
 
-    @reset_week.error
-    async def reset_week_error(
+    @reset.error
+    async def reset_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         if isinstance(error, app_commands.MissingPermissions):
             message = "You need the **Manage Server** permission to use this."
         else:
-            log.exception("/reset-week failed", exc_info=error)
+            log.exception("/reset failed", exc_info=error)
             message = "Something went wrong running that command."
         if interaction.response.is_done():
             await interaction.followup.send(message, ephemeral=True)
