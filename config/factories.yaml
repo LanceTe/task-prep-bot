@@ -1,6 +1,5 @@
 # Source of truth for factories, items, emojis and role names.
 # - `key` fields are stable internal IDs (safe to rename display name/emoji later).
-# - `channel_id` is where each factory message is posted (0 = TODO, fill in real IDs).
 # - `image` is a file in assets/factories/, or null for no picture (embed only).
 # - `emoji` uses `:name:` custom application emojis seeded from assets/emojis/ by
 #   scripts/seed_emojis.py (the name matches the image filename without extension).
@@ -9,7 +8,6 @@
 factories:
   - key: collection
     name: "🧺 Collection"
-    channel_id: 0
     image: null
     items:
       - key: truffle
@@ -24,7 +22,6 @@ factories:
 
   - key: feed_mill
     name: "🌾 Feed Mill"
-    channel_id: 0
     image: "feed_mill.png"
     items:
       - key: cow_feed
@@ -36,7 +33,6 @@ factories:
 
   - key: grinder
     name: "⚙️ Grinder"
-    channel_id: 0
     image: "grinder.png"
     items:
       - key: flour
@@ -51,7 +47,6 @@ factories:
 
   - key: dairy_processor
     name: "🥛 Dairy Processor"
-    channel_id: 0
     image: "dairy_processor.png"
     items:
       - key: cheese
@@ -72,7 +67,6 @@ factories:
 
   - key: sugar_mill
     name: "🍬 Sugar Mill"
-    channel_id: 0
     image: "sugar_mill.png"
     items:
       - key: white_sugar
@@ -90,7 +84,6 @@ factories:
 
   - key: bakery
     name: "🍞 Bakery"
-    channel_id: 0
     image: "bakery.png"
     items:
       - key: bread
@@ -105,7 +98,6 @@ factories:
 
   - key: grill
     name: "🍢 Grill"
-    channel_id: 0
     image: "grill.png"
     items:
       - key: crispy_strips
@@ -126,7 +118,6 @@ factories:
 
   - key: stove_kitchen
     name: "🍲 Stove Kitchen"
-    channel_id: 0
     image: "stove_kitchen.png"
     items:
       - key: clam_chowder
@@ -141,7 +132,6 @@ factories:
 
   - key: pizza_oven
     name: "🍕 Pizza Oven"
-    channel_id: 0
     image: "pizza_oven.png"
     items:
       - key: cheese_pizza
@@ -150,7 +140,6 @@ factories:
 
   - key: canning_factory
     name: "🥫 Canning Factory"
-    channel_id: 0
     image: "canning_factory.png"
     items:
       - key: canned_peaches
@@ -162,7 +151,6 @@ factories:
 
   - key: food_dehydrator
     name: "🍎 Food Dehydrator"
-    channel_id: 0
     image: "food_dehydrator.png"
     items:
       - key: dried_apples
@@ -174,7 +162,6 @@ factories:
 
   - key: ice_cream_maker
     name: "🍨 Ice Cream Maker"
-    channel_id: 0
     image: "ice_cream_maker.png"
     items:
       - key: ice_cream
@@ -186,7 +173,6 @@ factories:
 
   - key: salad_maker
     name: "🥗 Salad Maker"
-    channel_id: 0
     image: "salad_maker.png"
     items:
       - key: fruit_salad
@@ -195,7 +181,6 @@ factories:
 
   - key: juicer
     name: "🧃 Juicer"
-    channel_id: 0
     image: "juicer.png"
     items:
       - key: apple_juice
@@ -204,7 +189,6 @@ factories:
 
   - key: jam_maker
     name: "🍯 Jam Maker"
-    channel_id: 0
     image: "jam_maker.png"
     items:
       - key: peanut_butter
@@ -213,7 +197,6 @@ factories:
 
   - key: float_maker
     name: "🐟 Float Maker"
-    channel_id: 0
     image: "float_maker.png"
     items:
       - key: mermaid_float
