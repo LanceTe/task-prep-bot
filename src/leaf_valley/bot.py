@@ -15,7 +15,10 @@ from leaf_valley.storage.state_store import StateStore
 log = logging.getLogger(__name__)
 
 # Cogs loaded on startup. Extend as later milestones add commands/listeners.
-INITIAL_COGS = ("leaf_valley.cogs.setup",)
+INITIAL_COGS = (
+    "leaf_valley.cogs.setup",
+    "leaf_valley.cogs.reaction_roles",
+)
 
 
 class LeafValleyBot(commands.Bot):

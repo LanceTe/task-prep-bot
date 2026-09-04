@@ -167,6 +167,30 @@ class StateStore:
         item = factory.items.get(item_key)
         return item.role_id if item is not None else None
 
+    def role_id_for_reaction(
+        self, guild_id: int, message_id: int, emoji_id: int | None
+    ) -> int | None:
+        """Map a reaction (message + custom emoji) back to its item role ID.
+
+        Used by the reaction listeners: finds the factory owning ``message_id`` and
+        the item whose recorded ``emoji_id`` matches, returning its role ID. Managed
+        reactions are always custom application emojis, so a ``None`` ``emoji_id``
+        (a unicode reaction) never matches and returns None.
+        """
+        if emoji_id is None:
+            return None
+        guild = self.guilds.get(guild_id)
+        if guild is None:
+            return None
+        for factory in guild.factories.values():
+            if factory.message_id != message_id:
+                continue
+            for item in factory.items.values():
+                if item.emoji_id == emoji_id:
+                    return item.role_id
+            return None
+        return None
+
     def managed_role_ids(self, guild_id: int) -> set[int]:
         """Every known item role ID for a guild (for the weekly reset)."""
         guild = self.guilds.get(guild_id)

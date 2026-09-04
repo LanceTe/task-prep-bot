@@ -7,7 +7,12 @@ from types import SimpleNamespace
 import discord
 
 from leaf_valley.config.schema import Factory, FactoryConfig, Item
-from leaf_valley.services.role_service import clear_all, create_missing_roles
+from leaf_valley.services.role_service import (
+    assign_role,
+    clear_all,
+    create_missing_roles,
+    remove_role,
+)
 from leaf_valley.storage.state_store import StateStore
 
 
@@ -224,3 +229,98 @@ def test_clear_all_forbidden_stops_and_flags() -> None:
     assert result.forbidden is True
     assert result.roles_cleared == 0
     assert result.members_affected == 0
+
+
+class FakeSignupMember:
+    """A member that tracks role add/remove, backed by a guild for role lookup."""
+
+    def __init__(
+        self,
+        id: int,
+        guild: FakeGuild,
+        *,
+        forbid_add: bool = False,
+        forbid_remove: bool = False,
+    ) -> None:
+        self.id = id
+        self.guild = guild
+        self.forbid_add = forbid_add
+        self.forbid_remove = forbid_remove
+        self.added: list[FakeRole] = []
+        self.removed: list[FakeRole] = []
+
+    async def add_roles(self, role: FakeRole, *, reason: str) -> None:
+        if self.forbid_add:
+            resp = SimpleNamespace(status=403, reason="Forbidden")
+            raise discord.Forbidden(resp, "missing Manage Roles")
+        self.added.append(role)
+
+    async def remove_roles(self, role: FakeRole, *, reason: str) -> None:
+        if self.forbid_remove:
+            resp = SimpleNamespace(status=403, reason="Forbidden")
+            raise discord.Forbidden(resp, "missing Manage Roles")
+        self.removed.append(role)
+
+
+def test_assign_role_adds_managed_role() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild)
+
+    ok = asyncio.run(assign_role(member, 333))
+
+    assert ok is True
+    assert member.added == [cheese]
+
+
+def test_assign_role_unknown_role_is_noop() -> None:
+    guild = FakeGuild(111)
+    member = FakeSignupMember(1, guild)
+
+    ok = asyncio.run(assign_role(member, 999))
+
+    assert ok is False
+    assert member.added == []
+
+
+def test_assign_role_forbidden_returns_false() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild, forbid_add=True)
+
+    ok = asyncio.run(assign_role(member, 333))
+
+    assert ok is False
+    assert member.added == []
+
+
+def test_remove_role_removes_managed_role() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild)
+
+    ok = asyncio.run(remove_role(member, 333))
+
+    assert ok is True
+    assert member.removed == [cheese]
+
+
+def test_remove_role_unknown_role_is_noop() -> None:
+    guild = FakeGuild(111)
+    member = FakeSignupMember(1, guild)
+
+    ok = asyncio.run(remove_role(member, 999))
+
+    assert ok is False
+    assert member.removed == []
+
+
+def test_remove_role_forbidden_returns_false() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild, forbid_remove=True)
+
+    ok = asyncio.run(remove_role(member, 333))
+
+    assert ok is False
+    assert member.removed == []

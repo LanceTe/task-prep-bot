@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 
 ROLE_CREATE_REASON = "Leaf Valley: item preparation role"
 ROLE_CLEAR_REASON = "Leaf Valley: weekly reset"
+ROLE_ASSIGN_REASON = "Leaf Valley: reaction signup"
+ROLE_REMOVE_REASON = "Leaf Valley: reaction removed"
 
 
 @dataclass
@@ -154,3 +156,52 @@ async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult
 
     result.members_affected = len(affected)
     return result
+
+
+async def assign_role(member: discord.Member, role_id: int) -> bool:
+    """Add the managed role ``role_id`` to ``member``; return True on success.
+
+    Called by the reaction-add listener. A role missing from the guild (deleted
+    since setup) is a no-op returning False. Adding a role the member already has
+    is a harmless no-op on Discord's side. A permission denial is logged and
+    returns False rather than raising, so one bad reaction can't crash the listener.
+    """
+    role = member.guild.get_role(role_id)
+    if role is None:
+        return False
+    try:
+        await member.add_roles(role, reason=ROLE_ASSIGN_REASON)
+    except discord.Forbidden:
+        log.error(
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "cannot add role %r to member %s.",
+            member.guild.id,
+            role.name,
+            member.id,
+        )
+        return False
+    return True
+
+
+async def remove_role(member: discord.Member, role_id: int) -> bool:
+    """Remove the managed role ``role_id`` from ``member``; return True on success.
+
+    Called by the reaction-remove listener. Mirrors ``assign_role``: an unknown role
+    is a no-op, removing a role the member lacks is harmless, and a permission denial
+    is logged and returns False instead of raising.
+    """
+    role = member.guild.get_role(role_id)
+    if role is None:
+        return False
+    try:
+        await member.remove_roles(role, reason=ROLE_REMOVE_REASON)
+    except discord.Forbidden:
+        log.error(
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "cannot remove role %r from member %s.",
+            member.guild.id,
+            role.name,
+            member.id,
+        )
+        return False
+    return True

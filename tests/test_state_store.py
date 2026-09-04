@@ -104,3 +104,38 @@ def test_non_object_root_raises(tmp_path: Path) -> None:
     path.write_text("[]", encoding="utf-8")
     with pytest.raises(StateError, match="must be a JSON object"):
         StateStore.load(path)
+
+
+def _reaction_store(tmp_path: Path) -> StateStore:
+    store = StateStore.load(tmp_path / "state.json")
+    store.set_message_id(111, "milk_factory", 222)
+    store.set_role_id(111, "milk_factory", "cheese", 333)
+    store.set_emoji_id(111, "milk_factory", "cheese", 444)
+    return store
+
+
+def test_role_id_for_reaction_maps_message_and_emoji(tmp_path: Path) -> None:
+    store = _reaction_store(tmp_path)
+    assert store.role_id_for_reaction(111, 222, 444) == 333
+
+
+def test_role_id_for_reaction_wrong_emoji_on_right_message(tmp_path: Path) -> None:
+    store = _reaction_store(tmp_path)
+    # Right message, but an emoji not tied to any item on it.
+    assert store.role_id_for_reaction(111, 222, 999) is None
+
+
+def test_role_id_for_reaction_wrong_message(tmp_path: Path) -> None:
+    store = _reaction_store(tmp_path)
+    assert store.role_id_for_reaction(111, 555, 444) is None
+
+
+def test_role_id_for_reaction_unicode_emoji_never_matches(tmp_path: Path) -> None:
+    store = _reaction_store(tmp_path)
+    # A unicode reaction has no emoji id; it must never map to a managed role.
+    assert store.role_id_for_reaction(111, 222, None) is None
+
+
+def test_role_id_for_reaction_unknown_guild(tmp_path: Path) -> None:
+    store = _reaction_store(tmp_path)
+    assert store.role_id_for_reaction(222, 222, 444) is None
