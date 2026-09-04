@@ -38,10 +38,6 @@ class LeafValleyBot(commands.Bot):
             guild = discord.Object(id=settings.GUILD_ID)
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
-            # Wipe any previously-registered global commands so they don't show up
-            # as duplicates alongside the guild-scoped copies.
-            self.tree.clear_commands(guild=None)
-            await self.tree.sync()
         else:
             await self.tree.sync()
 
