@@ -45,6 +45,9 @@ class FactorySetupResult:
     # Emoji names referenced in config but not yet uploaded; when non-empty setup
     # aborts before posting anything.
     missing_emojis: list[str] = field(default_factory=list)
+    # Set to the existing board's channel ID when setup is run in a different
+    # channel; setup refuses to post a second board and reports this instead.
+    channel_conflict: int | None = None
     # Set once Discord denies posting/reacting; remaining factories are skipped.
     forbidden: bool = False
 
@@ -59,6 +62,17 @@ class FactorySetupResult:
         return bool(self.posted or self.refreshed)
 
 
+@dataclass
+class TeardownResult:
+    """Per-run summary of deleting a guild's factory messages."""
+
+    deleted: int = 0
+    # Tracked messages that were already gone (deleted by hand, etc.).
+    already_gone: int = 0
+    # Set if Discord denies a delete; state is left intact so the admin can retry.
+    forbidden: bool = False
+
+
 async def setup_factories(
     guild: discord.Guild,
     channel: discord.abc.Messageable,
@@ -69,6 +83,11 @@ async def setup_factories(
 ) -> FactorySetupResult:
     """Post or refresh every factory message in ``channel`` and seed its reactions.
 
+    Enforces a single board per guild: if the guild already has a board in a different
+    channel, returns early with ``channel_conflict`` set so the caller can tell the
+    admin to tear the old one down first. On the first successful run it records
+    ``channel`` as the guild's board channel.
+
     Resolves all ``:name:`` emoji references against ``emojis_by_name`` first; if any
     are missing, returns early without posting so the caller can direct the admin to
     the seed script. Aborts further work (keeping what succeeded) the first time
@@ -76,9 +95,17 @@ async def setup_factories(
     """
     result = FactorySetupResult()
 
+    existing_channel = store.get_channel_id(guild.id)
+    if existing_channel is not None and existing_channel != channel.id:
+        result.channel_conflict = existing_channel
+        return result
+
     result.missing_emojis = _find_missing_emojis(config, emojis_by_name)
     if result.missing_emojis:
         return result
+
+    if existing_channel is None:
+        store.set_channel_id(guild.id, channel.id)
 
     for factory in config.factories:
         embed, file = build_embed(factory, emojis_by_name, factories_dir)
@@ -156,6 +183,48 @@ async def seed_reactions(
         await message.add_reaction(emojis_by_name[item.emoji_name])
         added += 1
     return added
+
+
+async def teardown_factories(
+    guild: discord.Guild,
+    channel: discord.abc.Messageable,
+    config: FactoryConfig,
+    store: StateStore,
+) -> TeardownResult:
+    """Delete every tracked factory message in ``channel`` and forget the board.
+
+    Deleting a message removes its reactions, so signups shown as reactions are lost;
+    the underlying roles are left untouched. On success the guild's channel and message
+    IDs are cleared so a later /setup-factories can post fresh (in any channel). If a
+    delete is denied, stops and leaves state intact so the admin can retry after fixing
+    the Manage Messages permission.
+    """
+    result = TeardownResult()
+
+    for factory in config.factories:
+        message_id = store.get_message_id(guild.id, factory.key)
+        if message_id is None:
+            continue
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            result.already_gone += 1
+            continue
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            log.error(
+                "Missing 'Manage Messages' in channel %s; cannot delete factory "
+                "messages.",
+                getattr(channel, "id", "?"),
+            )
+            result.forbidden = True
+            return result
+
+        result.deleted += 1
+
+    store.reset_setup(guild.id)
+    return result
 
 
 def _find_missing_emojis(

@@ -1,4 +1,4 @@
-"""Admin slash commands for idempotent setup. Currently: /create-roles."""
+"""Admin slash commands for idempotent setup: /create-roles, /setup-factories, /teardown."""
 
 from __future__ import annotations
 
@@ -17,6 +17,51 @@ if TYPE_CHECKING:
     from leaf_valley.bot import LeafValleyBot
 
 log = logging.getLogger(__name__)
+
+
+class _ConfirmView(discord.ui.View):
+    """A two-button confirm/cancel prompt scoped to the admin who triggered it."""
+
+    def __init__(self, author_id: int) -> None:
+        super().__init__(timeout=30)
+        self.author_id = author_id
+        self.confirmed = False
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This confirmation isn’t yours.", ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Delete messages", style=discord.ButtonStyle.danger)
+    async def confirm(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        self.confirmed = True
+        self._disable_all()
+        self.stop()
+        # Disable the buttons and show progress so a second click can't fire.
+        await interaction.response.edit_message(
+            content="Tearing down… deleting factory messages.", view=self
+        )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        self.confirmed = False
+        self._disable_all()
+        self.stop()
+        await interaction.response.edit_message(
+            content="Teardown cancelled.", view=None
+        )
+
+    def _disable_all(self) -> None:
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
 
 
 class Setup(commands.Cog):
@@ -75,7 +120,7 @@ class Setup(commands.Cog):
 
     @app_commands.command(
         name="setup-factories",
-        description="Post/refresh each factory message and seed its reactions (idempotent).",
+        description="Post/refresh each factory message in this channel and seed reactions.",
     )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -87,11 +132,11 @@ class Setup(commands.Cog):
             )
             return
 
-        channel = guild.get_channel(settings.FACTORY_CHANNEL_ID)
+        channel = interaction.channel
         if not isinstance(channel, discord.TextChannel):
             await interaction.response.send_message(
-                f"The configured `FACTORY_CHANNEL_ID` ({settings.FACTORY_CHANNEL_ID}) "
-                "isn’t a text channel in this server. Fix it in `.env` and try again.",
+                "Run this in the text channel where you want the factory messages "
+                "posted.",
                 ephemeral=True,
             )
             return
@@ -111,6 +156,18 @@ class Setup(commands.Cog):
         )
         if result.changed:
             self.bot.state.save()
+
+        if result.channel_conflict is not None:
+            await interaction.followup.send(
+                f"⚠️ Factories are already set up in <#{result.channel_conflict}>.\n\n"
+                "I keep a single board per server, so I won’t post a second copy here. "
+                f"To move the board to {channel.mention}, first run `/teardown` — that "
+                "**deletes the existing factory messages and every reaction on them**, "
+                "so only do it at the **end of a rally**. Then run `/setup-factories` "
+                "here.",
+                ephemeral=True,
+            )
+            return
 
         if result.aborted:
             missing = ", ".join(f"`:{name}:`" for name in result.missing_emojis)
@@ -144,6 +201,88 @@ class Setup(commands.Cog):
             message = "You need the **Manage Server** permission to use this."
         else:
             log.exception("/setup-factories failed", exc_info=error)
+            message = "Something went wrong running that command."
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+
+    @app_commands.command(
+        name="teardown",
+        description="Delete all factory messages and their reactions. Use at the end of a rally.",
+    )
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def teardown(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+
+        channel_id = self.bot.state.get_channel_id(guild.id)
+        if channel_id is None:
+            await interaction.response.send_message(
+                "There are no factory messages set up to tear down.", ephemeral=True
+            )
+            return
+
+        view = _ConfirmView(interaction.user.id)
+        await interaction.response.send_message(
+            f"This will **delete every factory message in <#{channel_id}> and all "
+            "reactions on them**. Item roles are kept, but signups shown as reactions "
+            "will be lost, so only do this at the **end of a rally**.\n\nProceed?",
+            view=view,
+            ephemeral=True,
+        )
+        timed_out = await view.wait()
+        if timed_out:
+            await interaction.edit_original_response(
+                content="Teardown timed out — nothing was deleted.", view=None
+            )
+            return
+        if not view.confirmed:
+            return  # the Cancel button already updated the message
+
+        channel = guild.get_channel(channel_id)
+        if not isinstance(channel, discord.TextChannel):
+            # Channel was deleted or is inaccessible; just forget the board.
+            self.bot.state.reset_setup(guild.id)
+            self.bot.state.save()
+            await interaction.edit_original_response(
+                content=f"The tracked channel (<#{channel_id}>) is gone, so I cleared "
+                "the saved setup. You can run `/setup-factories` fresh anywhere.",
+                view=None,
+            )
+            return
+
+        result = await factory_service.teardown_factories(
+            guild, channel, self.bot.factory_config, self.bot.state
+        )
+        if not result.forbidden:
+            self.bot.state.save()
+
+        lines = [
+            f"**Teardown — {guild.name}**",
+            f"Deleted: {result.deleted}",
+            f"Already gone: {result.already_gone}",
+        ]
+        if result.forbidden:
+            lines.append(
+                "\n⚠️ I’m missing the **Manage Messages** permission, so I couldn’t "
+                "delete everything. Grant it, then run `/teardown` again."
+            )
+        await interaction.edit_original_response(content="\n".join(lines), view=None)
+
+    @teardown.error
+    async def teardown_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.MissingPermissions):
+            message = "You need the **Manage Server** permission to use this."
+        else:
+            log.exception("/teardown failed", exc_info=error)
             message = "Something went wrong running that command."
         if interaction.response.is_done():
             await interaction.followup.send(message, ephemeral=True)

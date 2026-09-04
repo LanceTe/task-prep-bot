@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import discord
 
 from leaf_valley.config.schema import Factory, FactoryConfig, Item
-from leaf_valley.services.factory_service import setup_factories
+from leaf_valley.services.factory_service import setup_factories, teardown_factories
 from leaf_valley.storage.state_store import StateStore
 
 
@@ -21,11 +21,13 @@ class FakeEmoji:
 
 
 class FakeMessage:
-    def __init__(self, id: int) -> None:
+    def __init__(self, id: int, *, forbid_delete: bool = False) -> None:
         self.id = id
         self.reactions: list[FakeEmoji] = []
         self.embed: discord.Embed | None = None
         self.edited = False
+        self.deleted = False
+        self.forbid_delete = forbid_delete
 
     async def add_reaction(self, emoji: FakeEmoji) -> None:
         self.reactions.append(emoji)
@@ -33,6 +35,12 @@ class FakeMessage:
     async def edit(self, *, embed: discord.Embed) -> None:
         self.embed = embed
         self.edited = True
+
+    async def delete(self) -> None:
+        if self.forbid_delete:
+            resp = SimpleNamespace(status=403, reason="Forbidden")
+            raise discord.Forbidden(resp, "missing Manage Messages")
+        self.deleted = True
 
 
 class FakeChannel:
@@ -229,3 +237,94 @@ def test_image_is_attached_when_file_exists(tmp_path: Path) -> None:
     message = channel.sent[0]
     assert message.embed is not None
     assert message.embed.image.url == "attachment://dairy.png"
+
+
+def test_first_run_records_the_channel(tmp_path: Path) -> None:
+    channel = FakeChannel(id=42)
+    store = _store(tmp_path)
+
+    result = _run(channel, store, tmp_path)
+
+    assert result.channel_conflict is None
+    assert result.posted == ["🥛 Dairy"]
+    assert store.get_channel_id(111) == 42
+
+
+def test_same_channel_rerun_refreshes(tmp_path: Path) -> None:
+    existing = FakeMessage(555)
+    channel = FakeChannel(id=42, existing={555: existing})
+    store = _store(tmp_path)
+    store.set_channel_id(111, 42)
+    store.set_message_id(111, "dairy", 555)
+
+    result = _run(channel, store, tmp_path)
+
+    assert result.channel_conflict is None
+    assert result.refreshed == ["🥛 Dairy"]
+    assert channel.sent == []
+
+
+def test_different_channel_is_reported_as_conflict(tmp_path: Path) -> None:
+    channel = FakeChannel(id=42)
+    store = _store(tmp_path)
+    # A board already lives in a different channel.
+    store.set_channel_id(111, 99)
+
+    result = _run(channel, store, tmp_path)
+
+    assert result.channel_conflict == 99
+    assert result.posted == []
+    assert result.changed is False
+    assert channel.sent == []
+    # The recorded channel is left untouched — no silent move.
+    assert store.get_channel_id(111) == 99
+
+
+def test_teardown_deletes_messages_and_forgets_board(tmp_path: Path) -> None:
+    message = FakeMessage(555)
+    channel = FakeChannel(id=42, existing={555: message})
+    store = _store(tmp_path)
+    store.set_channel_id(111, 42)
+    store.set_message_id(111, "dairy", 555)
+    store.set_role_id(111, "dairy", "cheese", 333)
+
+    result = asyncio.run(teardown_factories(_guild(), channel, _config(), store))
+
+    assert result.deleted == 1
+    assert result.already_gone == 0
+    assert result.forbidden is False
+    assert message.deleted is True
+    # Board is forgotten but roles survive.
+    assert store.get_channel_id(111) is None
+    assert store.get_message_id(111, "dairy") is None
+    assert store.get_role_id(111, "dairy", "cheese") == 333
+
+
+def test_teardown_counts_already_gone_messages(tmp_path: Path) -> None:
+    # State points at a message that's no longer in the channel.
+    channel = FakeChannel(id=42)
+    store = _store(tmp_path)
+    store.set_channel_id(111, 42)
+    store.set_message_id(111, "dairy", 999)
+
+    result = asyncio.run(teardown_factories(_guild(), channel, _config(), store))
+
+    assert result.deleted == 0
+    assert result.already_gone == 1
+    assert store.get_channel_id(111) is None
+
+
+def test_teardown_forbidden_keeps_state(tmp_path: Path) -> None:
+    message = FakeMessage(555, forbid_delete=True)
+    channel = FakeChannel(id=42, existing={555: message})
+    store = _store(tmp_path)
+    store.set_channel_id(111, 42)
+    store.set_message_id(111, "dairy", 555)
+
+    result = asyncio.run(teardown_factories(_guild(), channel, _config(), store))
+
+    assert result.forbidden is True
+    assert result.deleted == 0
+    # State is preserved so the admin can retry after granting the permission.
+    assert store.get_channel_id(111) == 42
+    assert store.get_message_id(111, "dairy") == 555

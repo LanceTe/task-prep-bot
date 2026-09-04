@@ -13,6 +13,7 @@ Shape on disk::
     {
       "guilds": {
         "111": {
+          "channel_id": 999,
           "factories": {
             "milk_factory": {
               "message_id": 222,
@@ -58,6 +59,8 @@ class FactoryState:
 class GuildState:
     """All factory state for a single guild."""
 
+    # The one channel this guild's factory board is posted in; None until setup runs.
+    channel_id: int | None = None
     factories: dict[str, FactoryState] = field(default_factory=dict)
 
 
@@ -100,6 +103,22 @@ class StateStore:
     def set_message_id(self, guild_id: int, factory_key: str, message_id: int) -> None:
         self._factory(guild_id, factory_key).message_id = message_id
 
+    def set_channel_id(self, guild_id: int, channel_id: int) -> None:
+        self.guilds.setdefault(guild_id, GuildState()).channel_id = channel_id
+
+    def reset_setup(self, guild_id: int) -> None:
+        """Forget the posted board: clear the channel and every message ID.
+
+        Roles and emoji IDs are left intact, so re-running setup re-posts the board
+        while existing signups (held as roles) survive. Used by /teardown.
+        """
+        guild = self.guilds.get(guild_id)
+        if guild is None:
+            return
+        guild.channel_id = None
+        for factory in guild.factories.values():
+            factory.message_id = None
+
     def set_role_id(
         self, guild_id: int, factory_key: str, item_key: str, role_id: int
     ) -> None:
@@ -114,6 +133,11 @@ class StateStore:
 
     def get_guild(self, guild_id: int) -> GuildState | None:
         return self.guilds.get(guild_id)
+
+    def get_channel_id(self, guild_id: int) -> int | None:
+        """The channel this guild's factory board is posted in, or None if unset."""
+        guild = self.guilds.get(guild_id)
+        return guild.channel_id if guild is not None else None
 
     def factory_key_for_message(self, guild_id: int, message_id: int) -> str | None:
         """Reverse lookup used by reaction events: which factory owns a message."""
@@ -169,6 +193,7 @@ class StateStore:
         return {
             "guilds": {
                 str(guild_id): {
+                    "channel_id": guild.channel_id,
                     "factories": {
                         factory_key: {
                             "message_id": factory.message_id,
@@ -181,7 +206,7 @@ class StateStore:
                             },
                         }
                         for factory_key, factory in guild.factories.items()
-                    }
+                    },
                 }
                 for guild_id, guild in self.guilds.items()
             }
@@ -216,6 +241,9 @@ def _parse_guilds(raw: Any) -> dict[int, GuildState]:
                 message_id=raw_factory.get("message_id"),
                 items=items,
             )
-        guilds[guild_id] = GuildState(factories=factories)
+        guilds[guild_id] = GuildState(
+            channel_id=raw_guild.get("channel_id"),
+            factories=factories,
+        )
 
     return guilds

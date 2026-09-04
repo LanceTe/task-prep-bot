@@ -17,6 +17,7 @@ def test_save_creates_data_dir_and_roundtrips(tmp_path: Path) -> None:
     path = tmp_path / "data" / "state.json"
     store = StateStore.load(path)
 
+    store.set_channel_id(111, 777)
     store.set_message_id(111, "milk_factory", 222)
     store.set_role_id(111, "milk_factory", "cheese", 333)
     store.set_emoji_id(111, "milk_factory", "cheese", 444)
@@ -25,11 +26,28 @@ def test_save_creates_data_dir_and_roundtrips(tmp_path: Path) -> None:
     assert path.is_file()
 
     reloaded = StateStore.load(path)
+    assert reloaded.get_channel_id(111) == 777
     assert reloaded.factory_key_for_message(111, 222) == "milk_factory"
     assert reloaded.get_role_id(111, "milk_factory", "cheese") == 333
     guild = reloaded.get_guild(111)
     assert guild is not None
     assert guild.factories["milk_factory"].items["cheese"].emoji_id == 444
+
+
+def test_reset_setup_clears_channel_and_messages_but_keeps_roles(
+    tmp_path: Path,
+) -> None:
+    store = StateStore.load(tmp_path / "state.json")
+    store.set_channel_id(111, 777)
+    store.set_message_id(111, "milk_factory", 222)
+    store.set_role_id(111, "milk_factory", "cheese", 333)
+
+    store.reset_setup(111)
+
+    assert store.get_channel_id(111) is None
+    assert store.get_message_id(111, "milk_factory") is None
+    # Roles survive a teardown so signups (held as roles) are preserved.
+    assert store.get_role_id(111, "milk_factory", "cheese") == 333
 
 
 def test_multiple_guilds_are_isolated(tmp_path: Path) -> None:
@@ -59,6 +77,7 @@ def test_reads_never_create_entries(tmp_path: Path) -> None:
 
     assert store.factory_key_for_message(111, 999) is None
     assert store.get_role_id(111, "milk_factory", "cheese") is None
+    assert store.get_channel_id(111) is None
     assert store.managed_role_ids(111) == set()
     # No phantom guild/factory should have been created by the reads above.
     assert store.guilds == {}

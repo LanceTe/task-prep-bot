@@ -31,9 +31,6 @@ def _require_env(name: str) -> str:
 
 BOT_TOKEN: str = _require_env("BOT_TOKEN")
 
-# Channel where every factory message is posted (all factories share one channel).
-FACTORY_CHANNEL_ID: int = int(_require_env("FACTORY_CHANNEL_ID"))
-
 # Optional dev guild: when set, commands sync to this guild instantly instead of
 # globally (global syncs can take up to an hour to propagate).
 _guild_id = os.environ.get("GUILD_ID")
