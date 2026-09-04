@@ -7,7 +7,7 @@
 
 factories:
   - key: collection
-    name: "🧺 Collection"
+    name: "Collection"
     image: null
     items:
       - key: truffle
@@ -21,7 +21,7 @@ factories:
         emoji: ":clam:"
 
   - key: feed_mill
-    name: "🌾 Feed Mill"
+    name: "Feed Mill"
     image: "feed_mill.png"
     items:
       - key: cow_feed
@@ -32,7 +32,7 @@ factories:
         emoji: ":chicken_feed:"
 
   - key: grinder
-    name: "⚙️ Grinder"
+    name: "Grinder"
     image: "grinder.png"
     items:
       - key: flour
@@ -46,7 +46,7 @@ factories:
         emoji: ":chili_powder:"
 
   - key: dairy_processor
-    name: "🥛 Dairy Processor"
+    name: "Dairy Processor"
     image: "dairy_processor.png"
     items:
       - key: cheese
@@ -66,7 +66,7 @@ factories:
         emoji: ":almond_butter:"
 
   - key: sugar_mill
-    name: "🍬 Sugar Mill"
+    name: "Sugar Mill"
     image: "sugar_mill.png"
     items:
       - key: white_sugar
@@ -83,7 +83,7 @@ factories:
         emoji: ":caramel:"
 
   - key: bakery
-    name: "🍞 Bakery"
+    name: "Bakery"
     image: "bakery.png"
     items:
       - key: bread
@@ -97,7 +97,7 @@ factories:
         emoji: ":cornbread:"
 
   - key: grill
-    name: "🍢 Grill"
+    name: "Grill"
     image: "grill.png"
     items:
       - key: crispy_strips
@@ -117,7 +117,7 @@ factories:
         emoji: ":potato_skewer:"
 
   - key: stove_kitchen
-    name: "🍲 Stove Kitchen"
+    name: "Stove Kitchen"
     image: "stove_kitchen.png"
     items:
       - key: clam_chowder
@@ -131,7 +131,7 @@ factories:
         emoji: ":spicy_omelet:"
 
   - key: pizza_oven
-    name: "🍕 Pizza Oven"
+    name: "Pizza Oven"
     image: "pizza_oven.png"
     items:
       - key: cheese_pizza
@@ -139,7 +139,7 @@ factories:
         emoji: ":cheese_pizza:"
 
   - key: canning_factory
-    name: "🥫 Canning Factory"
+    name: "Canning Factory"
     image: "canning_factory.png"
     items:
       - key: canned_peaches
@@ -150,7 +150,7 @@ factories:
         emoji: ":canned_sardines:"
 
   - key: food_dehydrator
-    name: "🍎 Food Dehydrator"
+    name: "Food Dehydrator"
     image: "food_dehydrator.png"
     items:
       - key: dried_apples
@@ -161,7 +161,7 @@ factories:
         emoji: ":cereal:"
 
   - key: ice_cream_maker
-    name: "🍨 Ice Cream Maker"
+    name: "Ice Cream Maker"
     image: "ice_cream_maker.png"
     items:
       - key: ice_cream
@@ -172,7 +172,7 @@ factories:
         emoji: ":apple_sherbet:"
 
   - key: salad_maker
-    name: "🥗 Salad Maker"
+    name: "Salad Maker"
     image: "salad_maker.png"
     items:
       - key: fruit_salad
@@ -180,7 +180,7 @@ factories:
         emoji: ":fruit_salad:"
 
   - key: juicer
-    name: "🧃 Juicer"
+    name: "Juicer"
     image: "juicer.png"
     items:
       - key: apple_juice
@@ -188,7 +188,7 @@ factories:
         emoji: ":apple_juice:"
 
   - key: jam_maker
-    name: "🍯 Jam Maker"
+    name: "Jam Maker"
     image: "jam_maker.png"
     items:
       - key: peanut_butter
@@ -196,7 +196,7 @@ factories:
         emoji: ":peanut_butter:"
 
   - key: float_maker
-    name: "🐟 Float Maker"
+    name: "Float Maker"
     image: "float_maker.png"
     items:
       - key: mermaid_float
