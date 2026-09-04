@@ -32,6 +32,17 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 ROLE_CREATE_REASON = "Leaf Valley: item preparation role"
+ROLE_CLEAR_REASON = "Leaf Valley: weekly reset"
+
+
+@dataclass
+class RoleClearResult:
+    """Per-run summary of removing managed roles from members (weekly reset)."""
+
+    roles_cleared: int = 0
+    members_affected: int = 0
+    # Set once Discord denies a removal; remaining members/roles are skipped.
+    forbidden: bool = False
 
 
 @dataclass
@@ -105,4 +116,41 @@ async def create_missing_roles(
             store.set_role_id(guild.id, factory.key, item.key, role.id)
             result.created.append(item.role_name)
 
+    return result
+
+
+async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult:
+    """Remove every managed item role from all members that hold it.
+
+    Iterates the given role IDs (typically ``store.managed_role_ids(guild.id)``),
+    stripping each role from its current holders. Roles no longer present in the
+    guild are skipped. ``members_affected`` counts distinct members touched, so a
+    member prepping several items is counted once. Stops the first time Discord
+    denies a removal, since that always means the bot's role sits too low or it
+    lacks Manage Roles; state is left untouched either way (roles aren't deleted).
+    """
+    result = RoleClearResult()
+    affected: set[int] = set()
+
+    for role_id in role_ids:
+        role = guild.get_role(role_id)
+        if role is None:
+            continue
+        # Snapshot holders: remove_roles mutates role.members mid-iteration.
+        for member in list(role.members):
+            try:
+                await member.remove_roles(role, reason=ROLE_CLEAR_REASON)
+            except discord.Forbidden:
+                log.error(
+                    "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+                    "cannot remove role %r.",
+                    guild.id,
+                    role.name,
+                )
+                result.forbidden = True
+                return result
+            affected.add(member.id)
+        result.roles_cleared += 1
+
+    result.members_affected = len(affected)
     return result

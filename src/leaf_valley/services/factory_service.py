@@ -73,6 +73,26 @@ class TeardownResult:
     forbidden: bool = False
 
 
+@dataclass
+class ReactionResetResult:
+    """Per-run summary of clearing and re-seeding each factory message's reactions."""
+
+    messages_reset: int = 0
+    reactions_added: int = 0
+    # Tracked messages that were already gone (deleted by hand, etc.).
+    already_gone: int = 0
+    # Emoji names referenced in config but no longer uploaded; when non-empty the
+    # reset aborts before touching any message.
+    missing_emojis: list[str] = field(default_factory=list)
+    # Set once Discord denies clearing/reacting; remaining messages are skipped.
+    forbidden: bool = False
+
+    @property
+    def aborted(self) -> bool:
+        """True when missing emojis prevented any reset."""
+        return bool(self.missing_emojis)
+
+
 async def setup_factories(
     guild: discord.Guild,
     channel: discord.abc.Messageable,
@@ -183,6 +203,55 @@ async def seed_reactions(
         await message.add_reaction(emojis_by_name[item.emoji_name])
         added += 1
     return added
+
+
+async def reset_reactions(
+    guild: discord.Guild,
+    channel: discord.abc.Messageable,
+    config: FactoryConfig,
+    store: StateStore,
+    emojis_by_name: dict[str, discord.Emoji],
+) -> ReactionResetResult:
+    """Clear all reactions on every factory message and re-seed the bot's own.
+
+    Used by /reset-week: ``message.clear_reactions()`` wipes every user's signup in
+    one call per message, then ``seed_reactions`` restores the board to its initial
+    state. Resolves emoji references first (they may have been deleted since setup)
+    and aborts before touching anything if any are missing. A tracked message that
+    has since been deleted is counted in ``already_gone`` and skipped; the first
+    permission denial stops the run and reports ``forbidden``.
+    """
+    result = ReactionResetResult()
+
+    result.missing_emojis = _find_missing_emojis(config, emojis_by_name)
+    if result.missing_emojis:
+        return result
+
+    for factory in config.factories:
+        message_id = store.get_message_id(guild.id, factory.key)
+        if message_id is None:
+            continue
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            result.already_gone += 1
+            continue
+        try:
+            await message.clear_reactions()
+            result.reactions_added += await seed_reactions(
+                message, factory, emojis_by_name
+            )
+        except discord.Forbidden:
+            log.error(
+                "Missing permission to manage reactions in channel %s; "
+                "grant Manage Messages and Add Reactions.",
+                getattr(channel, "id", "?"),
+            )
+            result.forbidden = True
+            return result
+        result.messages_reset += 1
+
+    return result
 
 
 async def teardown_factories(

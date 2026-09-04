@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import discord
 
 from leaf_valley.config.schema import Factory, FactoryConfig, Item
-from leaf_valley.services.role_service import create_missing_roles
+from leaf_valley.services.role_service import clear_all, create_missing_roles
 from leaf_valley.storage.state_store import StateStore
 
 
@@ -15,6 +15,23 @@ class FakeRole:
     def __init__(self, id: int, name: str) -> None:
         self.id = id
         self.name = name
+        # Members currently holding this role (mutated by FakeMember.remove_roles).
+        self.members: list[FakeMember] = []
+
+
+class FakeMember:
+    def __init__(self, id: int, *, forbid_remove: bool = False) -> None:
+        self.id = id
+        self.forbid_remove = forbid_remove
+        self.removed: list[FakeRole] = []
+
+    async def remove_roles(self, role: FakeRole, *, reason: str) -> None:
+        if self.forbid_remove:
+            resp = SimpleNamespace(status=403, reason="Forbidden")
+            raise discord.Forbidden(resp, "missing Manage Roles")
+        self.removed.append(role)
+        if self in role.members:
+            role.members.remove(self)
 
 
 class FakeGuild:
@@ -33,6 +50,9 @@ class FakeGuild:
         self.created: list[tuple[str, bool, str]] = []
         # Offset by guild id so distinct guilds mint distinct role IDs, as Discord does.
         self._next_id = id * 1000
+
+    def get_role(self, role_id: int) -> FakeRole | None:
+        return next((role for role in self.roles if role.id == role_id), None)
 
     async def create_role(
         self, *, name: str, mentionable: bool, reason: str
@@ -150,3 +170,57 @@ def test_multi_guild_isolation(tmp_path: Path) -> None:
     b_cheese = store.get_role_id(222, "dairy", "cheese")
     assert a_cheese is not None and b_cheese is not None
     assert a_cheese != b_cheese
+
+
+def test_clear_all_removes_managed_roles_from_members() -> None:
+    cheese = FakeRole(333, "cheese")
+    cream = FakeRole(334, "cream")
+    alice = FakeMember(1)
+    bob = FakeMember(2)
+    # Alice preps both items; Bob only cheese.
+    cheese.members = [alice, bob]
+    cream.members = [alice]
+    guild = FakeGuild(111, roles=(cheese, cream))
+
+    result = asyncio.run(clear_all(guild, {333, 334}))
+
+    assert result.roles_cleared == 2
+    # Alice is counted once despite holding two roles.
+    assert result.members_affected == 2
+    assert result.forbidden is False
+    assert cheese.members == []
+    assert cream.members == []
+
+
+def test_clear_all_skips_unknown_roles() -> None:
+    cheese = FakeRole(333, "cheese")
+    cheese.members = [FakeMember(1)]
+    guild = FakeGuild(111, roles=(cheese,))
+
+    # 999 no longer exists in the guild; it should be silently skipped.
+    result = asyncio.run(clear_all(guild, {333, 999}))
+
+    assert result.roles_cleared == 1
+    assert result.members_affected == 1
+
+
+def test_clear_all_counts_empty_roles() -> None:
+    empty = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(empty,))
+
+    result = asyncio.run(clear_all(guild, {333}))
+
+    assert result.roles_cleared == 1
+    assert result.members_affected == 0
+
+
+def test_clear_all_forbidden_stops_and_flags() -> None:
+    cheese = FakeRole(333, "cheese")
+    cheese.members = [FakeMember(1, forbid_remove=True)]
+    guild = FakeGuild(111, roles=(cheese,))
+
+    result = asyncio.run(clear_all(guild, {333}))
+
+    assert result.forbidden is True
+    assert result.roles_cleared == 0
+    assert result.members_affected == 0

@@ -7,7 +7,11 @@ from types import SimpleNamespace
 import discord
 
 from leaf_valley.config.schema import Factory, FactoryConfig, Item
-from leaf_valley.services.factory_service import setup_factories, teardown_factories
+from leaf_valley.services.factory_service import (
+    reset_reactions,
+    setup_factories,
+    teardown_factories,
+)
 from leaf_valley.storage.state_store import StateStore
 
 
@@ -21,13 +25,17 @@ class FakeEmoji:
 
 
 class FakeMessage:
-    def __init__(self, id: int, *, forbid_delete: bool = False) -> None:
+    def __init__(
+        self, id: int, *, forbid_delete: bool = False, forbid_clear: bool = False
+    ) -> None:
         self.id = id
         self.reactions: list[FakeEmoji] = []
         self.embed: discord.Embed | None = None
         self.edited = False
         self.deleted = False
+        self.cleared = False
         self.forbid_delete = forbid_delete
+        self.forbid_clear = forbid_clear
 
     async def add_reaction(self, emoji: FakeEmoji) -> None:
         self.reactions.append(emoji)
@@ -35,6 +43,13 @@ class FakeMessage:
     async def edit(self, *, embed: discord.Embed) -> None:
         self.embed = embed
         self.edited = True
+
+    async def clear_reactions(self) -> None:
+        if self.forbid_clear:
+            resp = SimpleNamespace(status=403, reason="Forbidden")
+            raise discord.Forbidden(resp, "missing Manage Messages")
+        self.cleared = True
+        self.reactions.clear()
 
     async def delete(self) -> None:
         if self.forbid_delete:
@@ -328,3 +343,77 @@ def test_teardown_forbidden_keeps_state(tmp_path: Path) -> None:
     # State is preserved so the admin can retry after granting the permission.
     assert store.get_channel_id(111) == 42
     assert store.get_message_id(111, "dairy") == 555
+
+
+def test_reset_clears_reactions_and_reseeds(tmp_path: Path) -> None:
+    message = FakeMessage(555)
+    message.reactions = [FakeEmoji(10, "cheese"), FakeEmoji(99, "user_junk")]
+    channel = FakeChannel(id=42, existing={555: message})
+    store = _store(tmp_path)
+    store.set_message_id(111, "dairy", 555)
+
+    result = asyncio.run(
+        reset_reactions(_guild(), channel, _config(), store, _emojis())
+    )
+
+    assert result.messages_reset == 1
+    assert result.reactions_added == 2
+    assert result.already_gone == 0
+    assert result.aborted is False
+    assert result.forbidden is False
+    # User reactions were wiped, then only the bot's item reactions restored.
+    assert message.cleared is True
+    assert [emoji.name for emoji in message.reactions] == ["cheese", "cream"]
+
+
+def test_reset_missing_emoji_aborts_before_touching_messages(tmp_path: Path) -> None:
+    message = FakeMessage(555)
+    message.reactions = [FakeEmoji(10, "cheese")]
+    channel = FakeChannel(id=42, existing={555: message})
+    store = _store(tmp_path)
+    store.set_message_id(111, "dairy", 555)
+
+    result = asyncio.run(
+        reset_reactions(
+            _guild(),
+            channel,
+            _config(),
+            store,
+            {"cheese": FakeEmoji(10, "cheese")},
+        )
+    )
+
+    assert result.missing_emojis == ["cream"]
+    assert result.aborted is True
+    assert result.messages_reset == 0
+    # Nothing was cleared: the abort happens before any message is touched.
+    assert message.cleared is False
+
+
+def test_reset_counts_already_gone_messages(tmp_path: Path) -> None:
+    channel = FakeChannel(id=42)
+    store = _store(tmp_path)
+    store.set_message_id(111, "dairy", 999)
+
+    result = asyncio.run(
+        reset_reactions(_guild(), channel, _config(), store, _emojis())
+    )
+
+    assert result.messages_reset == 0
+    assert result.already_gone == 1
+    assert result.reactions_added == 0
+
+
+def test_reset_forbidden_stops_and_flags(tmp_path: Path) -> None:
+    message = FakeMessage(555, forbid_clear=True)
+    channel = FakeChannel(id=42, existing={555: message})
+    store = _store(tmp_path)
+    store.set_message_id(111, "dairy", 555)
+
+    result = asyncio.run(
+        reset_reactions(_guild(), channel, _config(), store, _emojis())
+    )
+
+    assert result.forbidden is True
+    assert result.messages_reset == 0
+    assert result.reactions_added == 0
