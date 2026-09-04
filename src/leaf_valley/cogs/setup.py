@@ -118,6 +118,7 @@ class Setup(commands.Cog):
             f"Created: {len(result.created)}",
             f"Adopted: {len(result.adopted)}",
             f"Already linked: {len(result.existing)}",
+            f"Made mentionable: {len(result.made_mentionable)}",
         ]
         if result.forbidden:
             lines.append(

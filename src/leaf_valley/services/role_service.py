@@ -54,6 +54,8 @@ class RoleSyncResult:
     created: list[str] = field(default_factory=list)
     adopted: list[str] = field(default_factory=list)
     existing: list[str] = field(default_factory=list)
+    # Existing/adopted roles that weren't @mentionable and were fixed so pings notify.
+    made_mentionable: list[str] = field(default_factory=list)
     # Set once the bot is denied create permission; remaining creates are skipped.
     forbidden: bool = False
 
@@ -86,11 +88,13 @@ async def create_missing_roles(
         for item in factory.items:
             existing_id = store.get_role_id(guild.id, factory.key, item.key)
             if existing_id is not None and existing_id in roles_by_id:
+                await _ensure_mentionable(roles_by_id[existing_id], result)
                 result.existing.append(item.role_name)
                 continue
 
             adopted = roles_by_name.get(item.role_name)
             if adopted is not None:
+                await _ensure_mentionable(adopted, result)
                 store.set_role_id(guild.id, factory.key, item.key, adopted.id)
                 result.adopted.append(item.role_name)
                 continue
@@ -119,6 +123,29 @@ async def create_missing_roles(
             result.created.append(item.role_name)
 
     return result
+
+
+async def _ensure_mentionable(role: discord.Role, result: RoleSyncResult) -> None:
+    """Make a managed role @mentionable so pinging it notifies its members.
+
+    Freshly created roles already set this, but roles that were adopted or created
+    before this was enforced may not be mentionable — and Discord silently skips the
+    notification when a non-mentionable role is pinged. A permission denial is logged
+    and swallowed so it never blocks role linking.
+    """
+    if role.mentionable:
+        return
+    try:
+        await role.edit(mentionable=True, reason=ROLE_CREATE_REASON)
+    except discord.Forbidden:
+        log.error(
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "cannot make role %r mentionable.",
+            role.guild.id,
+            role.name,
+        )
+        return
+    result.made_mentionable.append(role.name)
 
 
 async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult:

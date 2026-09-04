@@ -17,11 +17,16 @@ from leaf_valley.storage.state_store import StateStore
 
 
 class FakeRole:
-    def __init__(self, id: int, name: str) -> None:
+    def __init__(self, id: int, name: str, *, mentionable: bool = True) -> None:
         self.id = id
         self.name = name
+        self.mentionable = mentionable
+        self.guild: FakeGuild | None = None
         # Members currently holding this role (mutated by FakeMember.remove_roles).
         self.members: list[FakeMember] = []
+
+    async def edit(self, *, mentionable: bool, reason: str) -> None:
+        self.mentionable = mentionable
 
 
 class FakeMember:
@@ -146,6 +151,44 @@ def test_adopts_when_state_id_is_stale(tmp_path: Path) -> None:
 
     assert result.adopted == ["cheese"]
     assert store.get_role_id(111, "dairy", "cheese") == 500
+
+
+def test_adopted_role_is_made_mentionable(tmp_path: Path) -> None:
+    # A pre-existing role with mentions disabled must be fixed so pings notify.
+    silent = FakeRole(500, "cheese", mentionable=False)
+    guild = FakeGuild(111, roles=(silent,))
+    store = _store(tmp_path)
+
+    result = asyncio.run(create_missing_roles(guild, _config(), store))
+
+    assert result.adopted == ["cheese"]
+    assert result.made_mentionable == ["cheese"]
+    assert silent.mentionable is True
+
+
+def test_existing_role_is_made_mentionable(tmp_path: Path) -> None:
+    # A role already linked in state but with mentions disabled is fixed in place.
+    silent = FakeRole(333, "cheese", mentionable=False)
+    guild = FakeGuild(111, roles=(silent,))
+    store = _store(tmp_path)
+    store.set_role_id(111, "dairy", "cheese", 333)
+
+    result = asyncio.run(create_missing_roles(guild, _config(), store))
+
+    assert result.existing == ["cheese"]
+    assert result.made_mentionable == ["cheese"]
+    assert silent.mentionable is True
+
+
+def test_already_mentionable_role_is_left_alone(tmp_path: Path) -> None:
+    role = FakeRole(333, "cheese", mentionable=True)
+    guild = FakeGuild(111, roles=(role,))
+    store = _store(tmp_path)
+    store.set_role_id(111, "dairy", "cheese", 333)
+
+    result = asyncio.run(create_missing_roles(guild, _config(), store))
+
+    assert result.made_mentionable == []
 
 
 def test_forbidden_stops_creation_but_still_adopts(tmp_path: Path) -> None:
