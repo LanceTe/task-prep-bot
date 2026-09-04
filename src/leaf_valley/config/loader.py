@@ -110,5 +110,7 @@ def _parse_item(raw: Any, factory_key: str, index: int) -> Item:
 def _require_str(raw: dict[str, Any], field: str, where: str) -> str:
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"{where}: '{field}' is required and must be a non-empty string.")
+        raise ConfigError(
+            f"{where}: '{field}' is required and must be a non-empty string."
+        )
     return value

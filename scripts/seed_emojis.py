@@ -25,7 +25,8 @@ def _discover_files(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
     return sorted(
-        p for p in root.iterdir()
+        p
+        for p in root.iterdir()
         if p.is_file() and p.suffix.lower() in ALLOWED_SUFFIXES
     )
 
@@ -37,7 +38,9 @@ async def _seed(client: discord.Client) -> int:
         return 0
 
     existing = {e.name for e in await client.fetch_application_emojis()}
-    print(f"Application already has {len(existing)} emoji(s). Found {len(files)} local file(s).\n")
+    print(
+        f"Application already has {len(existing)} emoji(s). Found {len(files)} local file(s).\n"
+    )
 
     uploaded = skipped = failed = 0
     for path in files:
@@ -54,7 +57,9 @@ async def _seed(client: discord.Client) -> int:
             continue
 
         try:
-            emoji = await client.create_application_emoji(name=name, image=path.read_bytes())
+            emoji = await client.create_application_emoji(
+                name=name, image=path.read_bytes()
+            )
         except discord.HTTPException as exc:
             print(f"  FAIL     :{name}: {exc}")
             failed += 1

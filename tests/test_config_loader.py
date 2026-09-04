@@ -82,9 +82,10 @@ def test_duplicate_factory_key_raises(tmp_path: Path) -> None:
 
 
 def test_duplicate_item_key_raises(tmp_path: Path) -> None:
-    text = VALID.replace('role_name: "cream"\n            emoji: ":cream:"', 'role_name: "cheese"\n            emoji: ":cheese:"').replace(
-        "- key: cream", "- key: cheese"
-    )
+    text = VALID.replace(
+        'role_name: "cream"\n            emoji: ":cream:"',
+        'role_name: "cheese"\n            emoji: ":cheese:"',
+    ).replace("- key: cream", "- key: cheese")
     with pytest.raises(ConfigError, match="duplicate item key"):
         load_factory_config(_write(tmp_path, text))
 
@@ -94,15 +95,19 @@ def test_too_many_items_raises(tmp_path: Path) -> None:
         f'          - key: item{i}\n            role_name: "item{i}"\n            emoji: ":item{i}:"'
         for i in range(21)
     )
-    text = dedent(
-        """
+    text = (
+        dedent(
+            """
         factories:
           - key: big
             name: "Big"
             image: null
             items:
         """
-    ) + items + "\n"
+        )
+        + items
+        + "\n"
+    )
     with pytest.raises(ConfigError, match="exceeding the Discord"):
         load_factory_config(_write(tmp_path, text))
 

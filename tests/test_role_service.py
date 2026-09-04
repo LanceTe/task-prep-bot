@@ -34,7 +34,9 @@ class FakeGuild:
         # Offset by guild id so distinct guilds mint distinct role IDs, as Discord does.
         self._next_id = id * 1000
 
-    async def create_role(self, *, name: str, mentionable: bool, reason: str) -> FakeRole:
+    async def create_role(
+        self, *, name: str, mentionable: bool, reason: str
+    ) -> FakeRole:
         if self.forbid_create:
             resp = SimpleNamespace(status=403, reason="Forbidden")
             raise discord.Forbidden(resp, "missing Manage Roles")
