@@ -19,6 +19,21 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
+def _is_admin():
+    """Allow the guild owner or any member holding the admin role to run a command."""
+
+    async def predicate(interaction: discord.Interaction) -> bool:
+        guild = interaction.guild
+        if guild is not None and interaction.user.id == guild.owner_id:
+            return True
+        roles = getattr(interaction.user, "roles", [])
+        if discord.utils.get(roles, name=settings.ADMIN_ROLE_NAME) is None:
+            raise app_commands.MissingRole(settings.ADMIN_ROLE_NAME)
+        return True
+
+    return app_commands.check(predicate)
+
+
 class _ConfirmView(discord.ui.View):
     """A two-button confirm/cancel prompt scoped to the admin who triggered it."""
 
@@ -81,7 +96,7 @@ class Setup(commands.Cog):
         description="Create any missing item roles and link them in state (idempotent).",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
+    @_is_admin()
     async def create_roles(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -131,7 +146,7 @@ class Setup(commands.Cog):
         description="Post/refresh each factory message in this channel and seed reactions.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
+    @_is_admin()
     async def setup_factories(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -220,7 +235,7 @@ class Setup(commands.Cog):
         description="Delete all factory messages and their reactions. Use at the end of a rally.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
+    @_is_admin()
     async def teardown(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -307,7 +322,7 @@ class Setup(commands.Cog):
         description="Clear every item role from members and wipe reaction signups.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
+    @_is_admin()
     async def reset(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
