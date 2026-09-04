@@ -5,3 +5,6 @@ help: ## Show this help
 
 seed-emojis: ## Upload assets/emojis/ files as application emojis (idempotent)
 	uv run python scripts/seed_emojis.py
+
+run:
+	uv run python -m leaf_valley
