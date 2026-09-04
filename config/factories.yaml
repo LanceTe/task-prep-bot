@@ -1,0 +1,233 @@
+# Source of truth for factories, items, emojis and role names.
+# - `key` fields are stable internal IDs (safe to rename display name/emoji later).
+# - `channel_id` is where each factory message is posted (0 = TODO, fill in real IDs).
+# - `image` is a file in assets/factories/, or null for no picture (embed only).
+# - `emoji` uses `:name:` custom application emojis seeded from assets/emojis/ by
+#   scripts/seed_emojis.py (the name matches the image filename without extension).
+# Only items that currently have an emoji in assets/emojis/ are listed here.
+
+factories:
+  - key: collection
+    name: "🧺 Collection"
+    channel_id: 0
+    image: null
+    items:
+      - key: truffle
+        role_name: "truffle"
+        emoji: ":truffle:"
+      - key: honeycomb
+        role_name: "honeycomb"
+        emoji: ":honeycomb:"
+      - key: clam
+        role_name: "clam"
+        emoji: ":clam:"
+
+  - key: feed_mill
+    name: "🌾 Feed Mill"
+    channel_id: 0
+    image: "feed_mill.png"
+    items:
+      - key: cow_feed
+        role_name: "cow feed"
+        emoji: ":cow_feed:"
+      - key: chicken_feed
+        role_name: "chicken feed"
+        emoji: ":chicken_feed:"
+
+  - key: grinder
+    name: "⚙️ Grinder"
+    channel_id: 0
+    image: "grinder.png"
+    items:
+      - key: flour
+        role_name: "flour"
+        emoji: ":flour:"
+      - key: grated_cheese
+        role_name: "grated cheese"
+        emoji: ":grated_cheese:"
+      - key: chili_powder
+        role_name: "chili powder"
+        emoji: ":chili_powder:"
+
+  - key: dairy_processor
+    name: "🥛 Dairy Processor"
+    channel_id: 0
+    image: "dairy_processor.png"
+    items:
+      - key: cheese
+        role_name: "cheese"
+        emoji: ":cheese:"
+      - key: cream
+        role_name: "cream"
+        emoji: ":cream:"
+      - key: butter
+        role_name: "butter"
+        emoji: ":butter:"
+      - key: yogurt
+        role_name: "yogurt"
+        emoji: ":yogurt:"
+      - key: almond_butter
+        role_name: "almond butter"
+        emoji: ":almond_butter:"
+
+  - key: sugar_mill
+    name: "🍬 Sugar Mill"
+    channel_id: 0
+    image: "sugar_mill.png"
+    items:
+      - key: white_sugar
+        role_name: "white sugar"
+        emoji: ":white_sugar:"
+      - key: honey
+        role_name: "honey"
+        emoji: ":honey:"
+      - key: syrup
+        role_name: "syrup"
+        emoji: ":syrup:"
+      - key: caramel
+        role_name: "caramel"
+        emoji: ":caramel:"
+
+  - key: bakery
+    name: "🍞 Bakery"
+    channel_id: 0
+    image: "bakery.png"
+    items:
+      - key: bread
+        role_name: "bread"
+        emoji: ":bread:"
+      - key: white_bread
+        role_name: "white bread"
+        emoji: ":white_bread:"
+      - key: cornbread
+        role_name: "cornbread"
+        emoji: ":cornbread:"
+
+  - key: grill
+    name: "🍢 Grill"
+    channel_id: 0
+    image: "grill.png"
+    items:
+      - key: crispy_strips
+        role_name: "crispy strips"
+        emoji: ":crispy_strips:"
+      - key: grilled_clam
+        role_name: "grilled clam"
+        emoji: ":grilled_clam:"
+      - key: scallop_skewer
+        role_name: "scallop skewer"
+        emoji: ":scallop_skewer:"
+      - key: grilled_fish
+        role_name: "grilled fish"
+        emoji: ":grilled_fish:"
+      - key: potato_skewer
+        role_name: "potato skewer"
+        emoji: ":potato_skewer:"
+
+  - key: stove_kitchen
+    name: "🍲 Stove Kitchen"
+    channel_id: 0
+    image: "stove_kitchen.png"
+    items:
+      - key: clam_chowder
+        role_name: "clam chowder"
+        emoji: ":clam_chowder:"
+      - key: savory_breakfast
+        role_name: "savory breakfast"
+        emoji: ":savory_breakfast:"
+      - key: spicy_omelet
+        role_name: "spicy omelet"
+        emoji: ":spicy_omelet:"
+
+  - key: pizza_oven
+    name: "🍕 Pizza Oven"
+    channel_id: 0
+    image: "pizza_oven.png"
+    items:
+      - key: cheese_pizza
+        role_name: "cheese pizza"
+        emoji: ":cheese_pizza:"
+
+  - key: canning_factory
+    name: "🥫 Canning Factory"
+    channel_id: 0
+    image: "canning_factory.png"
+    items:
+      - key: canned_peaches
+        role_name: "canned peaches"
+        emoji: ":canned_peach:"
+      - key: sardines
+        role_name: "sardines"
+        emoji: ":canned_sardines:"
+
+  - key: food_dehydrator
+    name: "🍎 Food Dehydrator"
+    channel_id: 0
+    image: "food_dehydrator.png"
+    items:
+      - key: dried_apples
+        role_name: "dried apples"
+        emoji: ":dried_apples:"
+      - key: cereal
+        role_name: "cereal"
+        emoji: ":cereal:"
+
+  - key: ice_cream_maker
+    name: "🍨 Ice Cream Maker"
+    channel_id: 0
+    image: "ice_cream_maker.png"
+    items:
+      - key: ice_cream
+        role_name: "ice cream"
+        emoji: ":ice_cream:"
+      - key: apple_sherbet
+        role_name: "apple sherbet"
+        emoji: ":apple_sherbet:"
+
+  - key: salad_maker
+    name: "🥗 Salad Maker"
+    channel_id: 0
+    image: "salad_maker.png"
+    items:
+      - key: fruit_salad
+        role_name: "fruit salad"
+        emoji: ":fruit_salad:"
+
+  - key: juicer
+    name: "🧃 Juicer"
+    channel_id: 0
+    image: "juicer.png"
+    items:
+      - key: apple_juice
+        role_name: "apple juice"
+        emoji: ":apple_juice:"
+
+  - key: jam_maker
+    name: "🍯 Jam Maker"
+    channel_id: 0
+    image: "jam_maker.png"
+    items:
+      - key: peanut_butter
+        role_name: "peanut butter"
+        emoji: ":peanut_butter:"
+
+  - key: float_maker
+    name: "🐟 Float Maker"
+    channel_id: 0
+    image: "float_maker.png"
+    items:
+      - key: mermaid_float
+        role_name: "mermaid float"
+        emoji: ":mermaid_float:"
+      - key: bear_float
+        role_name: "bear float"
+        emoji: ":bear_float:"
+      - key: carp_float
+        role_name: "carp float"
+        emoji: ":carp_float:"
+      - key: blowfish_float
+        role_name: "blowfish float"
+        emoji: ":blowfish_float:"
+      - key: round_float
+        role_name: "round float"
+        emoji: ":round_float:"

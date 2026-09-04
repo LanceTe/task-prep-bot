@@ -310,7 +310,14 @@ The service exposes two small helpers that are composed by the two commands:
 5. Persist `message_id` in `state.json`.
 
 Notes:
+- **`image` is optional (`Optional[str]`).** Some factories have no artwork (e.g.
+  `collection`, which isn't a real in-game building). When `image` is `null`, skip the
+  `discord.File` attachment and the `embed.set_image()` call and post an embed with no
+  picture — do **not** fall back to a `placeholder.png`, as opening a missing file raises
+  `FileNotFoundError`. The config schema must type `image` as optional and `post_factory_message`
+  must guard the attachment on it.
 - **Local file vs. URL:** local attachment is chosen because you'll run setup once, and
+
   it avoids relying on an external image host that could go down or rate-limit. If you
   ever want to edit the picture without reposting, switch to `embed.set_image(url=<URL>)`
   and edit the embed in place.
