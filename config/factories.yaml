@@ -144,7 +144,7 @@ factories:
     items:
       - key: canned_peaches
         role_name: "canned peaches"
-        emoji: ":canned_peach:"
+        emoji: ":canned_peaches:"
       - key: sardines
         role_name: "sardines"
         emoji: ":canned_sardines:"
