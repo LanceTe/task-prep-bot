@@ -33,7 +33,17 @@ class LeafValleyBot(commands.Bot):
     async def setup_hook(self) -> None:
         for cog in INITIAL_COGS:
             await self.load_extension(cog)
-        await self.tree.sync()
+        if settings.GUILD_ID is not None:
+            # Copy global commands to the dev guild and sync there for instant updates.
+            guild = discord.Object(id=settings.GUILD_ID)
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+            # Wipe any previously-registered global commands so they don't show up
+            # as duplicates alongside the guild-scoped copies.
+            self.tree.clear_commands(guild=None)
+            await self.tree.sync()
+        else:
+            await self.tree.sync()
 
     async def on_ready(self) -> None:
         log.info("Logged in as %s (id=%s)", self.user, getattr(self.user, "id", "?"))
