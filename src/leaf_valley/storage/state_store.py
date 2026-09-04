@@ -125,6 +125,14 @@ class StateStore:
                 return factory_key
         return None
 
+    def get_message_id(self, guild_id: int, factory_key: str) -> int | None:
+        """The posted message ID for a factory, or None if not yet posted."""
+        guild = self.guilds.get(guild_id)
+        if guild is None:
+            return None
+        factory = guild.factories.get(factory_key)
+        return factory.message_id if factory is not None else None
+
     def get_role_id(
         self, guild_id: int, factory_key: str, item_key: str
     ) -> int | None:
