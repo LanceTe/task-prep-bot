@@ -317,12 +317,29 @@ class Setup(commands.Cog):
             return
 
         channel_id = self.bot.state.get_channel_id(guild.id)
-        if channel_id is None:
+        has_roles = bool(self.bot.state.managed_role_ids(guild.id))
+        if channel_id is None and not has_roles:
             await interaction.response.send_message(
-                "There's nothing to reset — run `/setup-factories` first.",
+                "There's nothing to reset — run `/create-roles` and "
+                "`/setup-factories` first.",
                 ephemeral=True,
             )
             return
+
+        if channel_id is not None:
+            prompt = (
+                "This will **remove every item role from all members** and **wipe "
+                f"all reaction signups in <#{channel_id}>**, then re-seed the board's "
+                "reactions for a fresh week. The factory messages themselves are kept."
+                "\n\nProceed?"
+            )
+        else:
+            # Roles exist but the board was torn down; clear roles only.
+            prompt = (
+                "This will **remove every item role from all members**. No factory "
+                "board is set up, so there are no reactions to reset — run "
+                "`/setup-factories` when you want the signup board back.\n\nProceed?"
+            )
 
         view = _ConfirmView(
             interaction.user.id,
@@ -330,14 +347,7 @@ class Setup(commands.Cog):
             progress_message="Resetting… clearing roles and reactions.",
             cancel_message="Reset cancelled.",
         )
-        await interaction.response.send_message(
-            f"This will **remove every item role from all members** and **wipe all "
-            f"reaction signups in <#{channel_id}>**, then re-seed the board's "
-            "reactions for a fresh week. The factory messages themselves are kept."
-            "\n\nProceed?",
-            view=view,
-            ephemeral=True,
-        )
+        await interaction.response.send_message(prompt, view=view, ephemeral=True)
         timed_out = await view.wait()
         if timed_out:
             await interaction.edit_original_response(
@@ -350,8 +360,8 @@ class Setup(commands.Cog):
         emojis = await self.bot.fetch_application_emojis()
         emojis_by_name = {emoji.name: emoji for emoji in emojis}
 
-        channel = guild.get_channel(channel_id)
         reaction_result = None
+        channel = guild.get_channel(channel_id) if channel_id is not None else None
         if isinstance(channel, discord.TextChannel):
             reaction_result = await factory_service.reset_reactions(
                 guild,
@@ -369,7 +379,9 @@ class Setup(commands.Cog):
             f"Members affected: {role_result.members_affected}",
         ]
 
-        if reaction_result is None:
+        if channel_id is None:
+            pass  # no board set up; roles-only reset, nothing to report on reactions
+        elif reaction_result is None:
             lines.append(
                 f"\n⚠️ The board channel (<#{channel_id}>) is gone, so no reactions "
                 "were reset. Roles were still cleared."
