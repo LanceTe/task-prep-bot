@@ -35,3 +35,6 @@ BOT_TOKEN: str = _require_env("BOT_TOKEN")
 # globally (global syncs can take up to an hour to propagate).
 _guild_id = os.environ.get("GUILD_ID")
 GUILD_ID: int | None = int(_guild_id) if _guild_id else None
+
+# Members need a role with this name to run the admin commands (the leadership team).
+ADMIN_ROLE_NAME: str = os.environ.get("ADMIN_ROLE_NAME", "LT")

@@ -81,7 +81,7 @@ class Setup(commands.Cog):
         description="Create any missing item roles and link them in state (idempotent).",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
     async def create_roles(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -116,8 +116,8 @@ class Setup(commands.Cog):
     async def create_roles_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        if isinstance(error, app_commands.MissingPermissions):
-            message = "You need the **Manage Server** permission to use this."
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
         else:
             log.exception("/create-roles failed", exc_info=error)
             message = "Something went wrong running that command."
@@ -131,7 +131,7 @@ class Setup(commands.Cog):
         description="Post/refresh each factory message in this channel and seed reactions.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
     async def setup_factories(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -205,8 +205,8 @@ class Setup(commands.Cog):
     async def setup_factories_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        if isinstance(error, app_commands.MissingPermissions):
-            message = "You need the **Manage Server** permission to use this."
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
         else:
             log.exception("/setup-factories failed", exc_info=error)
             message = "Something went wrong running that command."
@@ -220,7 +220,7 @@ class Setup(commands.Cog):
         description="Delete all factory messages and their reactions. Use at the end of a rally.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
     async def teardown(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -292,8 +292,8 @@ class Setup(commands.Cog):
     async def teardown_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        if isinstance(error, app_commands.MissingPermissions):
-            message = "You need the **Manage Server** permission to use this."
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
         else:
             log.exception("/teardown failed", exc_info=error)
             message = "Something went wrong running that command."
@@ -307,7 +307,7 @@ class Setup(commands.Cog):
         description="Clear every item role from members and wipe reaction signups.",
     )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)
     async def reset(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
         if guild is None:
@@ -419,8 +419,8 @@ class Setup(commands.Cog):
     async def reset_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        if isinstance(error, app_commands.MissingPermissions):
-            message = "You need the **Manage Server** permission to use this."
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
         else:
             log.exception("/reset failed", exc_info=error)
             message = "Something went wrong running that command."

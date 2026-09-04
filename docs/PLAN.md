@@ -337,7 +337,9 @@ Notes:
 | `/reset-week` (a.k.a. `/clear-roles`) | Remove every managed item role from all members. Guarded by a confirmation prompt. |
 | `/status` | Show mapping health: which factories/roles/messages are wired up (debugging aid). |
 
-Restrict these to admins via `@app_commands.checks.has_permissions(manage_guild=True)`.
+Restrict these to the leadership team via
+`@app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)` (a role named `LT` by
+default, overridable with the `ADMIN_ROLE_NAME` env var).
 
 Custom-emoji upload is **not** a command — it's the `scripts/seed_emojis.py` seed script
 (§5a). Typical first-run order: `uv run python scripts/seed_emojis.py` → `/create-roles`
