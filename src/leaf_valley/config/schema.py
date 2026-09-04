@@ -31,3 +31,16 @@ class Factory:
 @dataclass(frozen=True)
 class FactoryConfig:
     factories: tuple[Factory, ...]
+
+
+@dataclass(frozen=True)
+class ColourRole:
+    key: str
+    role_name: str
+    emoji: str  # unicode emoji used as the reaction, e.g. "🔴"
+    colour: int  # 0xRRGGBB, applied to the Discord role
+
+
+@dataclass(frozen=True)
+class ColourConfig:
+    colours: tuple[ColourRole, ...]

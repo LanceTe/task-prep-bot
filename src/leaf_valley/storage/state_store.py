@@ -21,6 +21,11 @@ Shape on disk::
                 "cheese": { "role_id": 333, "emoji_id": null }
               }
             }
+          },
+          "colours": {
+            "channel_id": 999,
+            "message_id": 424,
+            "roles": { "red": 555 }
           }
         }
       }
@@ -56,12 +61,23 @@ class FactoryState:
 
 
 @dataclass
+class ColourState:
+    """Runtime IDs for the single name-colour picker board and its colour roles."""
+
+    channel_id: int | None = None
+    message_id: int | None = None
+    # colour key -> role_id
+    roles: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
 class GuildState:
     """All factory state for a single guild."""
 
     # The one channel this guild's factory board is posted in; None until setup runs.
     channel_id: int | None = None
     factories: dict[str, FactoryState] = field(default_factory=dict)
+    colours: ColourState = field(default_factory=ColourState)
 
 
 class StateStore:
@@ -128,6 +144,17 @@ class StateStore:
         self, guild_id: int, factory_key: str, item_key: str, emoji_id: int | None
     ) -> None:
         self._item(guild_id, factory_key, item_key).emoji_id = emoji_id
+
+    def set_colour_channel_id(self, guild_id: int, channel_id: int) -> None:
+        self.guilds.setdefault(guild_id, GuildState()).colours.channel_id = channel_id
+
+    def set_colour_message_id(self, guild_id: int, message_id: int) -> None:
+        self.guilds.setdefault(guild_id, GuildState()).colours.message_id = message_id
+
+    def set_colour_role_id(self, guild_id: int, colour_key: str, role_id: int) -> None:
+        self.guilds.setdefault(guild_id, GuildState()).colours.roles[colour_key] = (
+            role_id
+        )
 
     # --- reads (never create) -------------------------------------------
 
@@ -203,6 +230,27 @@ class StateStore:
             if item.role_id is not None
         }
 
+    def get_colour_channel_id(self, guild_id: int) -> int | None:
+        """The channel the colour board is posted in, or None if unset."""
+        guild = self.guilds.get(guild_id)
+        return guild.colours.channel_id if guild is not None else None
+
+    def get_colour_message_id(self, guild_id: int) -> int | None:
+        """The posted colour board message ID, or None if not yet posted."""
+        guild = self.guilds.get(guild_id)
+        return guild.colours.message_id if guild is not None else None
+
+    def get_colour_role_id(self, guild_id: int, colour_key: str) -> int | None:
+        guild = self.guilds.get(guild_id)
+        return guild.colours.roles.get(colour_key) if guild is not None else None
+
+    def managed_colour_role_ids(self, guild_id: int) -> set[int]:
+        """Every known colour role ID for a guild (for enforcing one colour)."""
+        guild = self.guilds.get(guild_id)
+        if guild is None:
+            return set()
+        return set(guild.colours.roles.values())
+
     # --- internal --------------------------------------------------------
 
     def _factory(self, guild_id: int, factory_key: str) -> FactoryState:
@@ -230,6 +278,11 @@ class StateStore:
                             },
                         }
                         for factory_key, factory in guild.factories.items()
+                    },
+                    "colours": {
+                        "channel_id": guild.colours.channel_id,
+                        "message_id": guild.colours.message_id,
+                        "roles": dict(guild.colours.roles),
                     },
                 }
                 for guild_id, guild in self.guilds.items()
@@ -265,9 +318,19 @@ def _parse_guilds(raw: Any) -> dict[int, GuildState]:
                 message_id=raw_factory.get("message_id"),
                 items=items,
             )
+        raw_colours = raw_guild.get("colours") or {}
+        colours = ColourState(
+            channel_id=raw_colours.get("channel_id"),
+            message_id=raw_colours.get("message_id"),
+            roles={
+                key: int(role_id)
+                for key, role_id in (raw_colours.get("roles") or {}).items()
+            },
+        )
         guilds[guild_id] = GuildState(
             channel_id=raw_guild.get("channel_id"),
             factories=factories,
+            colours=colours,
         )
 
     return guilds

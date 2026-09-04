@@ -8,8 +8,8 @@ import discord
 from discord.ext import commands
 
 from leaf_valley import settings
-from leaf_valley.config.loader import load_factory_config
-from leaf_valley.config.schema import FactoryConfig
+from leaf_valley.config.loader import load_colour_config, load_factory_config
+from leaf_valley.config.schema import ColourConfig, FactoryConfig
 from leaf_valley.storage.state_store import StateStore
 
 log = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 INITIAL_COGS = (
     "leaf_valley.cogs.setup",
     "leaf_valley.cogs.reaction_roles",
+    "leaf_valley.cogs.colour_roles",
 )
 
 
@@ -30,6 +31,9 @@ class LeafValleyBot(commands.Bot):
         # One shared config + state instance so the bot is the single state writer.
         self.factory_config: FactoryConfig = load_factory_config(
             settings.CONFIG_DIR / "factories.yaml"
+        )
+        self.colour_config: ColourConfig = load_colour_config(
+            settings.CONFIG_DIR / "colours.yaml"
         )
         self.state: StateStore = StateStore.load(settings.DATA_DIR / "state.json")
 

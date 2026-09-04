@@ -11,6 +11,10 @@ from discord.ext import commands
 
 from leaf_valley import settings
 from leaf_valley.services import factory_service
+from leaf_valley.services.colour_service import (
+    create_missing_colour_roles,
+    setup_colour_board,
+)
 from leaf_valley.services.role_service import clear_all, create_missing_roles
 
 if TYPE_CHECKING:
@@ -225,6 +229,123 @@ class Setup(commands.Cog):
             message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
         else:
             log.exception("/setup-factories failed", exc_info=error)
+            message = "Something went wrong running that command."
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+
+    @app_commands.command(
+        name="create-colours",
+        description="Create any missing name-colour roles and link them in state (idempotent).",
+    )
+    @app_commands.guild_only()
+    @_is_admin()
+    async def create_colours(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        result = await create_missing_colour_roles(
+            guild, self.bot.colour_config, self.bot.state
+        )
+        if result.changed:
+            self.bot.state.save()
+
+        lines = [
+            f"**Create colours — {guild.name}**",
+            f"Created: {len(result.created)}",
+            f"Adopted: {len(result.adopted)}",
+            f"Already linked: {len(result.existing)}",
+        ]
+        if result.forbidden:
+            lines.append(
+                "\n⚠️ I’m missing the **Manage Roles** permission, so some colour "
+                "roles couldn’t be created. Grant it, move my role above the colour "
+                "roles, then run this again."
+            )
+        await interaction.followup.send("\n".join(lines), ephemeral=True)
+
+    @create_colours.error
+    async def create_colours_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
+        else:
+            log.exception("/create-colours failed", exc_info=error)
+            message = "Something went wrong running that command."
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+
+    @app_commands.command(
+        name="setup-colours",
+        description="Post/refresh the name-colour picker board in this channel and seed reactions.",
+    )
+    @app_commands.guild_only()
+    @_is_admin()
+    async def setup_colours(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+
+        channel = interaction.channel
+        if not isinstance(channel, discord.TextChannel):
+            await interaction.response.send_message(
+                "Run this in the text channel where you want the colour board posted.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        result = await setup_colour_board(
+            guild, channel, self.bot.colour_config, self.bot.state
+        )
+        if result.changed:
+            self.bot.state.save()
+
+        if result.channel_conflict is not None:
+            await interaction.followup.send(
+                f"⚠️ The colour board is already posted in "
+                f"<#{result.channel_conflict}>. I keep a single board per server, so I "
+                f"won’t post a second copy here.",
+                ephemeral=True,
+            )
+            return
+
+        lines = [
+            f"**Setup colours — {guild.name}**",
+            f"Posted: {'yes' if result.posted else 'no'}",
+            f"Refreshed: {'yes' if result.refreshed else 'no'}",
+            f"Reactions seeded: {result.reactions_added}",
+        ]
+        if result.forbidden:
+            lines.append(
+                "\n⚠️ I’m missing permission to post or react in "
+                f"{channel.mention}. Grant me **View Channel**, **Send Messages** and "
+                "**Add Reactions**, then run this again."
+            )
+        await interaction.followup.send("\n".join(lines), ephemeral=True)
+
+    @setup_colours.error
+    async def setup_colours_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
+        else:
+            log.exception("/setup-colours failed", exc_info=error)
             message = "Something went wrong running that command."
         if interaction.response.is_done():
             await interaction.followup.send(message, ephemeral=True)

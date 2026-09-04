@@ -61,6 +61,31 @@ def test_multiple_guilds_are_isolated(tmp_path: Path) -> None:
     assert reloaded.get_role_id(222, "milk_factory", "cheese") == 999
 
 
+def test_colour_state_roundtrips(tmp_path: Path) -> None:
+    path = tmp_path / "data" / "state.json"
+    store = StateStore.load(path)
+
+    store.set_colour_channel_id(111, 999)
+    store.set_colour_message_id(111, 424)
+    store.set_colour_role_id(111, "red", 555)
+    store.set_colour_role_id(111, "blue", 556)
+    store.save()
+
+    reloaded = StateStore.load(path)
+    assert reloaded.get_colour_channel_id(111) == 999
+    assert reloaded.get_colour_message_id(111) == 424
+    assert reloaded.get_colour_role_id(111, "red") == 555
+    assert reloaded.managed_colour_role_ids(111) == {555, 556}
+
+
+def test_colour_reads_on_unknown_guild_return_defaults(tmp_path: Path) -> None:
+    store = StateStore.load(tmp_path / "state.json")
+    assert store.get_colour_channel_id(111) is None
+    assert store.get_colour_message_id(111) is None
+    assert store.get_colour_role_id(111, "red") is None
+    assert store.managed_colour_role_ids(111) == set()
+
+
 def test_managed_role_ids_collects_across_factories(tmp_path: Path) -> None:
     store = StateStore.load(tmp_path / "state.json")
     store.set_role_id(111, "milk_factory", "cheese", 333)

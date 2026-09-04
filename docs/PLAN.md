@@ -18,6 +18,7 @@ a task lead can `@ping` everyone who prepped a given item.
 | 5 | **Seed script** to upload custom emojis (application-owned) from a local folder (idempotent) | Nice-to-have |
 | 6 | Command to (re)build/refresh factory messages from config | Must-have |
 | 7 | Optional scheduled auto-reset (e.g. Monday 00:00) | Nice-to-have |
+| 8 | Name-colour reaction roles (pick one colour from a board) | Must-have |
 
 ---
 
@@ -104,7 +105,8 @@ leaf-valley/
 ├── .env.example              # documents required vars
 ├── .gitignore
 ├── config/
-│   └── factories.yaml        # source of truth: factories, items, emojis, role names
+│   ├── factories.yaml        # source of truth: factories, items, emojis, role names
+│   └── colours.yaml          # source of truth: name-colour roles (§9)
 ├── assets/
 │   ├── emojis/               # PNG/GIF files; filename (sans ext) = emoji name
 │   │   ├── cheese.png        #   -> uploaded as :cheese:
@@ -127,8 +129,8 @@ leaf-valley/
 │       ├── logging_config.py # logging setup
 │       ├── config/
 │       │   ├── __init__.py
-│       │   ├── schema.py     # dataclasses: Factory, Item, FactoryConfig
-│       │   └── loader.py     # parse & validate factories.yaml
+│       │   ├── schema.py     # dataclasses: Factory, Item, FactoryConfig, ColourRole, ColourConfig
+│       │   └── loader.py     # parse & validate factories.yaml + colours.yaml
 │       ├── storage/
 │       │   ├── __init__.py
 │       │   └── state_store.py # read/write data/state.json (message/role/emoji IDs)
@@ -136,11 +138,13 @@ leaf-valley/
 │       │   ├── __init__.py
 │       │   ├── role_service.py   # create roles, assign/remove, bulk clear
 │       │   ├── emoji_service.py  # list/find/upload application emojis (idempotent)
-│       │   └── factory_service.py# post/refresh factory messages + seed reactions
+│       │   ├── factory_service.py# post/refresh factory messages + seed reactions
+│       │   └── colour_service.py # create colour roles + post/refresh colour board (§9)
 │       └── cogs/
 │           ├── __init__.py
-│           ├── reaction_roles.py # raw reaction listeners -> role_service
-│           ├── setup.py          # /setup-factories, /create-roles
+│           ├── reaction_roles.py # raw item reaction listeners -> role_service
+│           ├── colour_roles.py   # raw colour reaction listeners (exclusive pick) (§9)
+│           ├── setup.py          # /setup-factories, /create-roles, /setup-colours, /create-colours
 │           └── admin.py          # /clear-roles, /reset-week, optional scheduler
 └── tests/
     ├── test_config_loader.py
@@ -334,6 +338,8 @@ Notes:
 |---------|---------|
 | `/create-roles` | Create any missing item roles (mentionable), store role IDs in state. |
 | `/setup-factories` | Post/refresh one message per factory and seed its reactions; store message IDs. Idempotent. |
+| `/create-colours` | Create any missing name-colour roles (coloured, non-mentionable), store role IDs. Idempotent (§9). |
+| `/setup-colours` | Post/refresh the single colour-picker board in this channel and seed its reactions (§9). Idempotent. |
 | `/reset-week` (a.k.a. `/clear-roles`) | Remove every managed item role from all members. Guarded by a confirmation prompt. |
 | `/status` | Show mapping health: which factories/roles/messages are wired up (debugging aid). |
 
@@ -398,6 +404,162 @@ Removing the reaction triggers `on_raw_reaction_remove` → `role_service.remove
 - **Manual reaction on wrong message / unknown emoji:** silently ignored.
 - **Role hierarchy / missing permission:** catch `discord.Forbidden`, log a clear
   actionable message ("move the bot role above item roles").
+
+---
+
+## 9. Name-colour reaction roles
+
+A second, independent reaction board lets members pick the **colour of their own name**.
+Discord derives a member's name colour from their **highest role that carries a
+non-default colour**, so the mechanism is simply: create one role per colour (each with
+a `colour=` set), post a small picker board, and grant the matching role on reaction.
+The existing item roles are created with the default colour, so they never affect a
+member's name colour and the two features don't interfere.
+
+### 9.1 Why a parallel path (not reused item plumbing)
+
+Colours behave differently enough from items that overloading the factory/item code
+would muddy both. The differences drive the design:
+
+| Aspect | Item roles (§1–§8) | Colour roles (§9) |
+|--------|--------------------|-------------------|
+| Selection | **Additive** — prep many items at once | **Exclusive** — one colour at a time |
+| Mentionable | Yes, so a lead can `@ping` preppers | **No** — a colour is never pinged |
+| Emoji | Custom application emojis, matched by `emoji_id` | **Unicode** (🔴🟠🟡🟢🔵🟣), matched by name |
+| Weekly reset | Yes — it's a rally signup | **No** — it's a personal preference |
+| Board | One message per factory | **One** picker message total |
+
+So colours get their own config file, schema, service and cog, and their own slice of
+state — mirroring the existing structure rather than threading `if is_colour` branches
+through it.
+
+### 9.2 Exclusivity (pick one colour)
+
+**Decided:** reacting a colour selects it and **deselects** any previous colour. On
+`on_raw_reaction_add` for a colour the cog:
+1. adds the new colour role to the member, then
+2. removes every *other* managed colour role the member holds, and
+3. removes that member's *other* colour reactions from the board so it reflects one
+   choice.
+
+Removing a reaction in step 3 fires `on_raw_reaction_remove`, which removes the
+corresponding role — but that role is already gone from step 2, so it's a harmless
+idempotent no-op (no loops, no "in-progress" flag needed). Un-reacting a colour with no
+replacement simply removes that colour role, leaving the member on Discord's default
+colour.
+
+> Alternative considered: **additive** colour roles (let a member hold several and let
+> Discord show only the highest). Simpler to implement (identical to the item flow) but
+> confusing — the board would show a member reacted to three colours while only one
+> shows. Rejected in favour of the single-choice UX above.
+
+### 9.3 Configuration format
+
+`config/colours.yaml` (kept separate from `factories.yaml` so colour and item concerns
+stay independent):
+
+```yaml
+colours:
+  - key: red            # stable internal id
+    role_name: "🎨 Red" # the Discord role's name (grouping only; the colour is what shows)
+    emoji: "🔴"          # unicode emoji used as the reaction
+    colour: "#e74c3c"   # hex; parsed to discord.Colour for the role
+  - key: blue
+    role_name: "🎨 Blue"
+    emoji: "🔵"
+    colour: "#3498db"
+```
+
+Validation (in the loader, failing loudly like `factories.yaml`):
+- `key` unique and non-empty; `role_name` non-empty.
+- `emoji` a **unicode** emoji (not a `:name:` reference — colour reactions don't use
+  application emojis, so matching is by the unicode character).
+- `colour` a valid `#RRGGBB` hex string; rejected otherwise.
+- Reject duplicate `emoji` values (two colours can't share a reaction) and cap the list
+  at `MAX_ITEMS_PER_FACTORY` (20, Discord's per-message reaction limit).
+
+### 9.4 State
+
+Extend `GuildState` with an optional colour slice, written by `/setup-colours` and
+`/create-colours`:
+
+```json
+"colours": {
+  "channel_id": 999,
+  "message_id": 424242,
+  "roles": { "red": 555, "blue": 556 }
+}
+```
+
+New store helpers (mirroring the factory ones, guild-scoped, reads never create):
+- `set_colour_channel_id` / `set_colour_message_id` / `set_colour_role_id`.
+- `get_colour_message_id(guild_id)` and `get_colour_channel_id(guild_id)`.
+- `colour_role_id_for_reaction(guild_id, message_id, emoji_name, config)` — returns the
+  role ID when `message_id` is the colour board and `emoji_name` matches a configured
+  colour's unicode emoji. Unlike items this matches on the **unicode character** (via the
+  config), so no `emoji_id` is stored.
+- `managed_colour_role_ids(guild_id)` — for the "remove other colours" step in §9.2.
+
+### 9.5 Service — `colour_service.py`
+
+Pure-ish logic against the Discord API, matching `role_service`/`factory_service`
+conventions (mutates the in-memory `StateStore`, never saves — the cog persists once):
+
+- `create_missing_colour_roles(guild, config, store)` — idempotent create/adopt of each
+  colour role, created with `colour=discord.Colour(int(hex, 16))` and
+  `mentionable=False`. Same existing/adopted/created outcomes and `discord.Forbidden`
+  handling as `create_missing_roles`.
+- `setup_colour_board(guild, channel, config, store)` — post or refresh the single
+  colour board embed (title + a legend line `🔴 — Red` per colour) and seed its unicode
+  reactions via a shared `seed_colour_reactions` helper. Enforces one board per guild
+  like `setup_factories`. No image attachment and no emoji-resolution step (unicode
+  emojis need no upload).
+
+### 9.6 Cog — `colour_roles.py`
+
+A second thin cog with raw reaction listeners, separate from `reaction_roles` so each
+stays focused. Both cogs receive every reaction event; each ignores anything that isn't
+its own board (the item cog only matches custom `emoji_id`s, the colour cog only matches
+the colour board's `message_id` + unicode emoji), so they never collide.
+
+- `on_raw_reaction_add` → resolve colour role via `colour_role_id_for_reaction`; apply
+  the exclusivity flow in §9.2 through new `colour_service` helpers
+  (`assign_colour`/`clear_other_colours`) that reuse `role_service.assign_role` /
+  `remove_role`.
+- `on_raw_reaction_remove` → remove the colour role (mirrors the item remove listener).
+- Ignore the bot's own seed reactions and DM reactions, exactly as the item cog does.
+
+Register it in `bot.py`'s `INITIAL_COGS`.
+
+### 9.7 Commands (in `cogs/setup.py`, reusing the admin guard)
+
+- `/create-colours` — create/link missing colour roles; report created/adopted/existing
+  counts and any `Forbidden`, same shape as `/create-roles`.
+- `/setup-colours` — post/refresh the colour board in the current channel and seed its
+  reactions; same single-board and permission handling as `/setup-factories`.
+
+First-run order for this feature: `/create-colours` → `/setup-colours`.
+
+### 9.8 Reset / teardown interaction
+
+`/reset-week` and `/teardown` are **left unchanged**: a chosen name colour is a personal
+preference, not a weekly rally signup, so the weekly reset must not strip it. If a clean
+removal of the colour board is ever wanted it should be a **separate** explicit command
+(e.g. `/teardown-colours`), never folded into the rally reset. This is a deliberate
+decision, called out so a future change doesn't silently wipe members' colours.
+
+### 9.9 Edge cases
+
+- **Role hierarchy:** the bot's role must sit above the colour roles to assign them;
+  `discord.Forbidden` is caught and logged with the same actionable message as items.
+- **Colour vs. other coloured roles:** if a member already has a higher coloured role
+  (e.g. a staff role), that still wins — expected Discord behaviour, documented so it
+  isn't reported as a bug.
+- **Emoji edited in config:** changing a colour's `emoji` after setup means the old
+  reaction no longer maps; re-run `/setup-colours` (it re-seeds) and old reactions become
+  inert (ignored), matching item behaviour.
+- **No custom emojis / no seed script:** colours use unicode emojis, so
+  `scripts/seed_emojis.py` is irrelevant to this feature.
 - **Rate limits:** discord.py handles them, but batch the weekly clear and add small
   awaits to avoid hammering large member lists.
 - **Ignore bot's own reactions** when seeding messages (`payload.user_id == bot.user.id`).

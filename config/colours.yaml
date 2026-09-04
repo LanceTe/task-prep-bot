@@ -1,0 +1,36 @@
+# Source of truth for name-colour reaction roles (see docs/PLAN.md §9).
+# - `key` is a stable internal id (safe to rename role_name/emoji/colour later).
+# - `emoji` is a unicode emoji (not a `:name:` reference); it's the reaction users click.
+# - `colour` is a `#RRGGBB` hex applied to the Discord role, which sets the name colour.
+# Picking a colour is exclusive: reacting a new colour swaps out the previous one.
+
+colours:
+  - key: red
+    role_name: "Red"
+    emoji: "🔴"
+    colour: "#e74c3c"
+
+  - key: orange
+    role_name: "Orange"
+    emoji: "🟠"
+    colour: "#e67e22"
+
+  - key: yellow
+    role_name: "Yellow"
+    emoji: "🟡"
+    colour: "#f1c40f"
+
+  - key: green
+    role_name: "Green"
+    emoji: "🟢"
+    colour: "#2ecc71"
+
+  - key: blue
+    role_name: "Blue"
+    emoji: "🔵"
+    colour: "#3498db"
+
+  - key: purple
+    role_name: "Purple"
+    emoji: "🟣"
+    colour: "#9b59b6"

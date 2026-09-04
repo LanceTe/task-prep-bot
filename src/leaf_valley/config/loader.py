@@ -13,6 +13,8 @@ import yaml
 
 from leaf_valley.config.schema import (
     MAX_ITEMS_PER_FACTORY,
+    ColourConfig,
+    ColourRole,
     Factory,
     FactoryConfig,
     Item,
@@ -49,6 +51,46 @@ def load_factory_config(path: Path) -> FactoryConfig:
         factories.append(factory)
 
     return FactoryConfig(factories=tuple(factories))
+
+
+def load_colour_config(path: Path) -> ColourConfig:
+    if not path.is_file():
+        raise ConfigError(f"Config file not found: {path}")
+
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ConfigError(f"Invalid YAML in {path}: {exc}") from exc
+
+    if not isinstance(raw, dict) or "colours" not in raw:
+        raise ConfigError("Top-level 'colours' key is required.")
+
+    raw_colours = raw["colours"]
+    if not isinstance(raw_colours, list) or not raw_colours:
+        raise ConfigError("'colours' must be a non-empty list.")
+    if len(raw_colours) > MAX_ITEMS_PER_FACTORY:
+        raise ConfigError(
+            f"'colours' has {len(raw_colours)} entries, exceeding the Discord "
+            f"limit of {MAX_ITEMS_PER_FACTORY} reactions per message."
+        )
+
+    colours: list[ColourRole] = []
+    seen_keys: set[str] = set()
+    seen_emojis: set[str] = set()
+    for index, raw_colour in enumerate(raw_colours):
+        colour = _parse_colour(raw_colour, index)
+        if colour.key in seen_keys:
+            raise ConfigError(f"Duplicate colour key: {colour.key!r}")
+        if colour.emoji in seen_emojis:
+            raise ConfigError(
+                f"Duplicate colour emoji {colour.emoji!r}; each colour needs a "
+                "distinct reaction."
+            )
+        seen_keys.add(colour.key)
+        seen_emojis.add(colour.emoji)
+        colours.append(colour)
+
+    return ColourConfig(colours=tuple(colours))
 
 
 def _parse_factory(raw: Any, index: int) -> Factory:
@@ -105,6 +147,42 @@ def _parse_item(raw: Any, factory_key: str, index: int) -> Item:
         )
 
     return Item(key=key, role_name=role_name, emoji=emoji)
+
+
+def _parse_colour(raw: Any, index: int) -> ColourRole:
+    where = f"colour #{index + 1}"
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{where} must be a mapping.")
+
+    key = _require_str(raw, "key", where)
+    where = f"colour {key!r}"
+    role_name = _require_str(raw, "role_name", where)
+    emoji = _require_str(raw, "emoji", where)
+
+    if emoji.startswith(":") and emoji.endswith(":"):
+        raise ConfigError(
+            f"{where}: 'emoji' must be a unicode emoji like '🔴', not an "
+            f"application-emoji reference, got {emoji!r}."
+        )
+
+    raw_hex = _require_str(raw, "colour", where)
+    colour = _parse_hex_colour(raw_hex, where)
+
+    return ColourRole(key=key, role_name=role_name, emoji=emoji, colour=colour)
+
+
+def _parse_hex_colour(raw: str, where: str) -> int:
+    value = raw.lstrip("#")
+    if len(value) != 6:
+        raise ConfigError(
+            f"{where}: 'colour' must be a '#RRGGBB' hex string, got {raw!r}."
+        )
+    try:
+        return int(value, 16)
+    except ValueError as exc:
+        raise ConfigError(
+            f"{where}: 'colour' must be a '#RRGGBB' hex string, got {raw!r}."
+        ) from exc
 
 
 def _require_str(raw: dict[str, Any], field: str, where: str) -> str:
