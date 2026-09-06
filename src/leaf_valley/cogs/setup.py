@@ -96,6 +96,66 @@ class Setup(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
+        name="healthz",
+        description="Sanity check: gateway latency and what’s wired up in this server.",
+    )
+    @app_commands.guild_only()
+    @_is_admin()
+    async def healthz(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+
+        state = self.bot.state
+        factory_cfg = self.bot.factory_config
+        colour_cfg = self.bot.colour_config
+
+        item_count = sum(len(f.items) for f in factory_cfg.factories)
+        factory_channel_id = state.get_channel_id(guild.id)
+        colour_channel_id = state.get_colour_channel_id(guild.id)
+        colour_message_id = state.get_colour_message_id(guild.id)
+
+        factory_board = (
+            f"<#{factory_channel_id}>" if factory_channel_id is not None else "not set up"
+        )
+        colour_board = (
+            f"<#{colour_channel_id}>"
+            if colour_channel_id is not None and colour_message_id is not None
+            else "not set up"
+        )
+
+        latency_ms = round(self.bot.latency * 1000)
+
+        lines = [
+            f"**Health — {guild.name}**",
+            f"Gateway latency: {latency_ms} ms",
+            f"Configured: {len(factory_cfg.factories)} factories "
+            f"({item_count} items), {len(colour_cfg.colours)} colours",
+            f"Factory board: {factory_board}",
+            f"Item roles linked: {len(state.managed_role_ids(guild.id))}",
+            f"Colour board: {colour_board}",
+            f"Colour roles linked: {len(state.managed_colour_role_ids(guild.id))}",
+        ]
+        await interaction.response.send_message("\n".join(lines), ephemeral=True)
+
+    @healthz.error
+    async def healthz_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.MissingRole):
+            message = f"You need the **{settings.ADMIN_ROLE_NAME}** role to use this."
+        else:
+            log.exception("/healthz failed", exc_info=error)
+            message = "Something went wrong running that command."
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+
+    @app_commands.command(
         name="create-roles",
         description="Create any missing item roles and link them in state (idempotent).",
     )
