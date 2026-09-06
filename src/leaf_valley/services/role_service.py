@@ -224,8 +224,9 @@ async def assign_role(member: discord.Member, role_id: int) -> bool:
         )
         return False
     log.info(
-        "Assigned role %r to member %s in guild %s.",
+        "Assigned role %r to %s (%s) in guild %s.",
         role.name,
+        member.display_name,
         member.id,
         member.guild.id,
     )
@@ -257,8 +258,9 @@ async def remove_role(member: discord.Member, role_id: int) -> bool:
         )
         return False
     log.info(
-        "Removed role %r from member %s in guild %s.",
+        "Removed role %r from %s (%s) in guild %s.",
         role.name,
+        member.display_name,
         member.id,
         member.guild.id,
     )

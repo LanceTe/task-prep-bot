@@ -109,6 +109,12 @@ class Setup(commands.Cog):
             )
             return
 
+        log.info(
+            "/healthz invoked by %s (%s) in guild %s",
+            interaction.user.display_name,
+            interaction.user.id,
+            guild.id,
+        )
         state = self.bot.state
         factory_cfg = self.bot.factory_config
         colour_cfg = self.bot.colour_config
@@ -175,7 +181,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/create-roles invoked by %s (%s) in guild %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
         )
@@ -244,7 +250,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/setup-factories invoked by %s (%s) in guild %s channel %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
             channel.id,
@@ -328,7 +334,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/create-colours invoked by %s (%s) in guild %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
         )
@@ -392,7 +398,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/setup-colours invoked by %s (%s) in guild %s channel %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
             channel.id,
@@ -485,7 +491,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/teardown confirmed by %s (%s) in guild %s channel %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
             channel_id,
@@ -591,7 +597,7 @@ class Setup(commands.Cog):
 
         log.info(
             "/reset confirmed by %s (%s) in guild %s",
-            interaction.user,
+            interaction.user.display_name,
             interaction.user.id,
             guild.id,
         )

@@ -27,6 +27,7 @@ class FakeMember:
     ) -> None:
         self.id = id
         self.guild = guild
+        self.display_name = f"member-{id}"
         self.roles = list(roles)
         self.added: list[FakeRole] = []
         self.removed: list[FakeRole] = []

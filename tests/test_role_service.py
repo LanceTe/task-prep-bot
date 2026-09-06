@@ -288,6 +288,7 @@ class FakeSignupMember:
     ) -> None:
         self.id = id
         self.guild = guild
+        self.display_name = f"member-{id}"
         self.roles = list(roles)
         self.forbid_add = forbid_add
         self.forbid_remove = forbid_remove
