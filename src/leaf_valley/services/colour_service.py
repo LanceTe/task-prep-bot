@@ -121,6 +121,13 @@ async def create_missing_colour_roles(
         store.set_colour_role_id(guild.id, colour.key, role.id)
         result.created.append(colour.role_name)
 
+    log.info(
+        "Colour role sync in guild %s: created=%d adopted=%d existing=%d.",
+        guild.id,
+        len(result.created),
+        len(result.adopted),
+        len(result.existing),
+    )
     return result
 
 
@@ -158,6 +165,15 @@ async def setup_colour_board(
         )
         result.forbidden = True
 
+    if result.changed:
+        log.info(
+            "Colour board in guild %s channel %s: posted=%s refreshed=%s reactions=%d.",
+            guild.id,
+            getattr(channel, "id", "?"),
+            result.posted,
+            result.refreshed,
+            result.reactions_added,
+        )
     return result
 
 

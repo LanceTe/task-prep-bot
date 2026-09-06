@@ -150,6 +150,15 @@ async def setup_factories(
                 guild.id, factory.key, item.key, emojis_by_name[item.emoji_name].id
             )
 
+    if result.changed:
+        log.info(
+            "Factory setup in guild %s channel %s: posted=%d refreshed=%d reactions=%d.",
+            guild.id,
+            getattr(channel, "id", "?"),
+            len(result.posted),
+            len(result.refreshed),
+            result.reactions_added,
+        )
     return result
 
 
@@ -251,6 +260,14 @@ async def reset_reactions(
             return result
         result.messages_reset += 1
 
+    log.info(
+        "Factory reactions reset in guild %s channel %s: messages=%d reactions=%d already_gone=%d.",
+        guild.id,
+        getattr(channel, "id", "?"),
+        result.messages_reset,
+        result.reactions_added,
+        result.already_gone,
+    )
     return result
 
 
@@ -293,6 +310,13 @@ async def teardown_factories(
         result.deleted += 1
 
     store.reset_setup(guild.id)
+    log.info(
+        "Factory teardown in guild %s channel %s: deleted=%d already_gone=%d.",
+        guild.id,
+        getattr(channel, "id", "?"),
+        result.deleted,
+        result.already_gone,
+    )
     return result
 
 

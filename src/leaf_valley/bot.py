@@ -38,16 +38,31 @@ class LeafValleyBot(commands.Bot):
         )
         self.state: StateStore = StateStore.load(settings.DATA_DIR / "state.json")
 
+        item_count = sum(len(f.items) for f in self.factory_config.factories)
+        log.info(
+            "Loaded config: %d factories (%d items), %d colours.",
+            len(self.factory_config.factories),
+            item_count,
+            len(self.colour_config.colours),
+        )
+
     async def setup_hook(self) -> None:
         for cog in INITIAL_COGS:
             await self.load_extension(cog)
+        log.info("Loaded %d cog(s): %s.", len(INITIAL_COGS), ", ".join(INITIAL_COGS))
         if settings.GUILD_ID is not None:
             # Copy global commands to the dev guild and sync there for instant updates.
             guild = discord.Object(id=settings.GUILD_ID)
             self.tree.copy_global_to(guild=guild)
-            await self.tree.sync(guild=guild)
+            synced = await self.tree.sync(guild=guild)
+            log.info(
+                "Synced %d application command(s) to guild %s.",
+                len(synced),
+                settings.GUILD_ID,
+            )
         else:
-            await self.tree.sync()
+            synced = await self.tree.sync()
+            log.info("Synced %d application command(s) globally.", len(synced))
 
     async def on_ready(self) -> None:
         log.info("Logged in as %s (id=%s)", self.user, getattr(self.user, "id", "?"))

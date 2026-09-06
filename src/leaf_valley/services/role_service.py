@@ -122,6 +122,13 @@ async def create_missing_roles(
             store.set_role_id(guild.id, factory.key, item.key, role.id)
             result.created.append(item.role_name)
 
+    log.info(
+        "Role sync in guild %s: created=%d adopted=%d existing=%d.",
+        guild.id,
+        len(result.created),
+        len(result.adopted),
+        len(result.existing),
+    )
     return result
 
 
@@ -182,6 +189,12 @@ async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult
         result.roles_cleared += 1
 
     result.members_affected = len(affected)
+    log.info(
+        "Cleared %d role(s) from %d member(s) in guild %s.",
+        result.roles_cleared,
+        result.members_affected,
+        guild.id,
+    )
     return result
 
 
@@ -207,6 +220,12 @@ async def assign_role(member: discord.Member, role_id: int) -> bool:
             member.id,
         )
         return False
+    log.info(
+        "Assigned role %r to member %s in guild %s.",
+        role.name,
+        member.id,
+        member.guild.id,
+    )
     return True
 
 
@@ -231,4 +250,10 @@ async def remove_role(member: discord.Member, role_id: int) -> bool:
             member.id,
         )
         return False
+    log.info(
+        "Removed role %r from member %s in guild %s.",
+        role.name,
+        member.id,
+        member.guild.id,
+    )
     return True

@@ -173,6 +173,12 @@ class Setup(commands.Cog):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
+        log.info(
+            "/create-roles invoked by %s (%s) in guild %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+        )
         result = await create_missing_roles(
             guild, self.bot.factory_config, self.bot.state
         )
@@ -236,6 +242,13 @@ class Setup(commands.Cog):
         emojis = await self.bot.fetch_application_emojis()
         emojis_by_name = {emoji.name: emoji for emoji in emojis}
 
+        log.info(
+            "/setup-factories invoked by %s (%s) in guild %s channel %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+            channel.id,
+        )
         result = await factory_service.setup_factories(
             guild,
             channel,
@@ -313,6 +326,12 @@ class Setup(commands.Cog):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
+        log.info(
+            "/create-colours invoked by %s (%s) in guild %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+        )
         result = await create_missing_colour_roles(
             guild, self.bot.colour_config, self.bot.state
         )
@@ -371,6 +390,13 @@ class Setup(commands.Cog):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
+        log.info(
+            "/setup-colours invoked by %s (%s) in guild %s channel %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+            channel.id,
+        )
         result = await setup_colour_board(
             guild, channel, self.bot.colour_config, self.bot.state
         )
@@ -457,6 +483,13 @@ class Setup(commands.Cog):
         if not view.confirmed:
             return  # the Cancel button already updated the message
 
+        log.info(
+            "/teardown confirmed by %s (%s) in guild %s channel %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+            channel_id,
+        )
         channel = guild.get_channel(channel_id)
         if not isinstance(channel, discord.TextChannel):
             # Channel was deleted or is inaccessible; just forget the board.
@@ -556,6 +589,12 @@ class Setup(commands.Cog):
         if not view.confirmed:
             return  # the Cancel button already updated the message
 
+        log.info(
+            "/reset confirmed by %s (%s) in guild %s",
+            interaction.user,
+            interaction.user.id,
+            guild.id,
+        )
         emojis = await self.bot.fetch_application_emojis()
         emojis_by_name = {emoji.name: emoji for emoji in emojis}
 
