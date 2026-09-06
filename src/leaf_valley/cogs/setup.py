@@ -119,7 +119,9 @@ class Setup(commands.Cog):
         colour_message_id = state.get_colour_message_id(guild.id)
 
         factory_board = (
-            f"<#{factory_channel_id}>" if factory_channel_id is not None else "not set up"
+            f"<#{factory_channel_id}>"
+            if factory_channel_id is not None
+            else "not set up"
         )
         colour_board = (
             f"<#{colour_channel_id}>"
@@ -132,7 +134,7 @@ class Setup(commands.Cog):
         lines = [
             f"**Health — {guild.name}**",
             f"Gateway latency: {latency_ms} ms",
-            f"Configured: {len(factory_cfg.factories)} factories "
+            f"Configured: {len(factory_cfg.factories)} factories ",
             f"({item_count} items), {len(colour_cfg.colours)} colours",
             f"Factory board: {factory_board}",
             f"Item roles linked: {len(state.managed_role_ids(guild.id))}",

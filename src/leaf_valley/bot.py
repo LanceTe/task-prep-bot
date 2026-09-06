@@ -10,6 +10,7 @@ from discord.ext import commands
 from leaf_valley import settings
 from leaf_valley.config.loader import load_colour_config, load_factory_config
 from leaf_valley.config.schema import ColourConfig, FactoryConfig
+from leaf_valley.logging_config import configure_logging
 from leaf_valley.storage.state_store import StateStore
 
 log = logging.getLogger(__name__)
@@ -53,4 +54,6 @@ class LeafValleyBot(commands.Bot):
 
 
 def run() -> None:
-    LeafValleyBot().run(settings.BOT_TOKEN)
+    configure_logging(settings.LOG_DIR, settings.LOG_LEVEL)
+    # log_handler=None stops discord.py installing its own root StreamHandler on top.
+    LeafValleyBot().run(settings.BOT_TOKEN, log_handler=None)

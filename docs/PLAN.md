@@ -341,7 +341,6 @@ Notes:
 | `/create-colours` | Create any missing name-colour roles (coloured, non-mentionable), store role IDs. Idempotent (§9). |
 | `/setup-colours` | Post/refresh the single colour-picker board in this channel and seed its reactions (§9). Idempotent. |
 | `/reset-week` (a.k.a. `/clear-roles`) | Remove every managed item role from all members. Guarded by a confirmation prompt. |
-| `/status` | Show mapping health: which factories/roles/messages are wired up (debugging aid). |
 
 Restrict these to the leadership team via
 `@app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)` (a role named `LT` by
@@ -577,6 +576,124 @@ decision, called out so a future change doesn't silently wipe members' colours.
 
 ---
 
+## Logging
+
+Log to a single text file so ops can grep, tail, and archive it, with the console
+stream preserved for interactive/dev use. **Not** a file-per-level split — every entry
+already carries `%(levelname)s`, so `grep ERROR logs/leaf-valley.log` beats a second
+file that fragments the timeline of an incident.
+
+### Layout
+
+- New directory `logs/` at repo root, git-ignored (mirrors `data/`). Path overridable
+  via `LOG_DIR` env var so the systemd unit can point it at `/var/log/leaf-valley/`
+  in production.
+- One append-only file: `logs/leaf-valley.log`. **No automatic rotation** — the bot is
+  used sparingly (KB/week, not MB/day), so a growing single file is easier to `mv`,
+  `gzip`, or `truncate` by hand than a rotated set. If runaway growth ever becomes a
+  concern, swapping the `FileHandler` for a
+  `RotatingFileHandler(maxBytes=5_000_000, backupCount=5)` is a one-line change and
+  caps disk at ~25 MB without imposing a retention window.
+- Console handler on `stderr` kept as well — cheap, and journald picks it up if you
+  ever want to double-check via `journalctl -u leaf-valley`.
+
+### `src/leaf_valley/logging_config.py`
+
+Single function `configure_logging(settings)` called once from `__main__.py` **before**
+`LeafValleyBot` is instantiated. It:
+1. Creates `settings.log_dir` if missing.
+2. Builds a `Formatter` `"%(asctime)s %(levelname)-8s %(name)s: %(message)s"`.
+3. Attaches two handlers to the root logger: a `FileHandler` on
+   `logs/leaf-valley.log` and a `StreamHandler(sys.stderr)`.
+4. Sets root level from `settings.log_level` (default `INFO`).
+5. Silences noisy third parties: `logging.getLogger("discord").setLevel(WARNING)` (plus
+   `discord.http` and `discord.gateway`).
+
+Every existing `log = logging.getLogger(__name__)` continues to work unchanged —
+**no edits to any cog or service** are required to route their output to the file. The
+extra INFO lines discussed separately (lifecycle events, admin-command audit) can be
+added incrementally without touching this module.
+
+### `settings.py` additions
+
+Two new fields, both with sensible defaults so existing deploys don't need `.env`
+changes:
+
+- `LOG_LEVEL` (default `"INFO"`).
+- `LOG_DIR` (default `Path("logs")`, resolved relative to the project root the same way
+  `data/` is).
+
+### Wiring
+
+`__main__.py`:
+```python
+from .logging_config import configure_logging
+from .settings import get_settings
+
+def main() -> None:
+    settings = get_settings()
+    configure_logging(settings)
+    bot = LeafValleyBot(settings)
+    bot.run(settings.bot_token, log_handler=None)
+```
+
+`log_handler=None` tells discord.py to leave the root logging config alone; otherwise
+it installs its own `StreamHandler` and every line prints twice.
+
+### Deploy
+
+- Add `logs/` to `.gitignore`.
+- In `deploy/leaf-valley.service`, use systemd's built-in log dir management rather
+  than `mkdir`:
+  ```ini
+  [Service]
+  LogsDirectory=leaf-valley                     # systemd creates/owns /var/log/leaf-valley
+  Environment=LOG_DIR=/var/log/leaf-valley      # app writes there
+  ```
+  `LogsDirectory=` creates the directory owned by the service user, which is nicer
+  than hand-rolled `mkdir -p` + `chown`.
+
+### Operational notes
+
+- **Canonical sink:** the text file at `$LOG_DIR/leaf-valley.log`. Journald picks up
+  stderr as a convenience for `journalctl -u leaf-valley`, but it is **not** canonical
+  — journald has its own retention (`SystemMaxUse=`, `MaxRetentionSec=` in
+  `journald.conf`) and will silently roll off oldest entries. The file is under your
+  control and stays until you decide to prune it.
+- **Lifecycle:** `systemctl stop`, `systemctl disable`, `systemctl disable --now`,
+  removing the unit file, and rebooting all leave both the file and the journal
+  entries intact. `LogsDirectory=` is in systemd's persistent family (unlike
+  `RuntimeDirectory=`). Only three things delete logs: journald retention rolling off,
+  a manual `journalctl --vacuum-*`, or you removing `/var/log/leaf-valley/` by hand.
+- **Migrating servers:** the file is portable — no journal export needed.
+  1. On the new host: install the service; first start creates `/var/log/leaf-valley/`.
+  2. `systemctl stop leaf-valley` on the new host.
+  3. `scp old:/var/log/leaf-valley/leaf-valley.log new:/var/log/leaf-valley/`.
+  4. `chown <service-user>:<service-group> /var/log/leaf-valley/leaf-valley.log`.
+  5. `systemctl start leaf-valley` — it reopens the file in append mode.
+  6. On the old host, once satisfied: `systemctl disable --now leaf-valley`, optionally
+     `rm` the unit file + `daemon-reload`, and optionally `rm -rf /var/log/leaf-valley/`.
+
+### Why not…
+
+- **A file per level.** A single event has one level, so a P1 investigation would force
+  you to open three files with interleaved timestamps. `grep -E 'ERROR|WARNING'` on one
+  file gives the same view without splitting the story.
+- **Daily/time-based rotation.** Its purpose is bounded retention (delete files older
+  than N days), which is the opposite of what's wanted here — you want to keep
+  everything until you choose to archive.
+- **JSON logs.** Overkill until there's a log aggregator downstream; add later by
+  swapping the `Formatter`.
+- **Async logging (`QueueHandler`).** Not needed at the volume this bot produces; adds
+  moving parts without a real problem to solve.
+
+### Build order slot
+
+Fits inside the existing "Polish" milestone in the build order below, ahead of the
+extra INFO lines being added to services/cogs.
+
+---
+
 ## 9. Suggested build order (milestones)
 
 1. **Skeleton:** `settings.py`, `bot.py`, `__main__.py`; bot logs in and syncs commands.
@@ -587,7 +704,7 @@ decision, called out so a future change doesn't silently wipe members' colours.
 6. **Reaction roles cog** (add/remove listeners) — end-to-end reaction → role works.
 7. **Admin `/reset-week`** with confirmation.
 8. **Emoji seed script** `scripts/seed_emojis.py` + `emoji_service` (idempotent upload).
-9. **Polish:** `/status`, optional scheduler, logging, README.
+9. **Polish:** optional scheduler, logging, README.
 
 ---
 

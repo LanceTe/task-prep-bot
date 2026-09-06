@@ -4,6 +4,7 @@
 
 # Runtime state (created by the bot at runtime)
 data/
+logs/
 
 # Python
 __pycache__/
