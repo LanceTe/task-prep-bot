@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from leaf_valley.services import colour_service
+from leaf_valley.services import colour_service, role_service
 
 if TYPE_CHECKING:
     from leaf_valley.bot import LeafValleyBot
@@ -54,10 +54,7 @@ class ColourRoles(commands.Cog):
         if colour is None:
             return
         role_id, member = colour
-        role = member.guild.get_role(role_id)
-        if role is None:
-            return
-        await member.remove_roles(role, reason="Leaf Valley: colour deselected")
+        await role_service.remove_role(member, role_id)
 
     def _colour_for_payload(
         self, payload: discord.RawReactionActionEvent
