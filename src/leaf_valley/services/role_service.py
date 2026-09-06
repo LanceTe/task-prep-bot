@@ -202,13 +202,16 @@ async def assign_role(member: discord.Member, role_id: int) -> bool:
     """Add the managed role ``role_id`` to ``member``; return True on success.
 
     Called by the reaction-add listener. A role missing from the guild (deleted
-    since setup) is a no-op returning False. Adding a role the member already has
-    is a harmless no-op on Discord's side. A permission denial is logged and
-    returns False rather than raising, so one bad reaction can't crash the listener.
+    since setup) is a no-op returning False. If the member already holds the role,
+    short-circuits without an API call or log line (see PLAN.md §8). A permission
+    denial is logged and returns False rather than raising, so one bad reaction
+    can't crash the listener.
     """
     role = member.guild.get_role(role_id)
     if role is None:
         return False
+    if any(r.id == role_id for r in member.roles):
+        return True
     try:
         await member.add_roles(role, reason=ROLE_ASSIGN_REASON)
     except discord.Forbidden:
@@ -233,12 +236,15 @@ async def remove_role(member: discord.Member, role_id: int) -> bool:
     """Remove the managed role ``role_id`` from ``member``; return True on success.
 
     Called by the reaction-remove listener. Mirrors ``assign_role``: an unknown role
-    is a no-op, removing a role the member lacks is harmless, and a permission denial
-    is logged and returns False instead of raising.
+    is a no-op returning False, a member who doesn't hold the role short-circuits
+    without an API call or log line (see PLAN.md §8), and a permission denial is
+    logged and returns False instead of raising.
     """
     role = member.guild.get_role(role_id)
     if role is None:
         return False
+    if not any(r.id == role_id for r in member.roles):
+        return True
     try:
         await member.remove_roles(role, reason=ROLE_REMOVE_REASON)
     except discord.Forbidden:

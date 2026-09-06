@@ -403,6 +403,13 @@ Removing the reaction triggers `on_raw_reaction_remove` → `role_service.remove
 - **Manual reaction on wrong message / unknown emoji:** silently ignored.
 - **Role hierarchy / missing permission:** catch `discord.Forbidden`, log a clear
   actionable message ("move the bot role above item roles").
+- **Idempotent role changes:** `role_service.assign_role` / `remove_role` short-circuit
+  when the member is already in the desired state (role already held / already absent):
+  no API call, no log. This suppresses the duplicate log line during a colour swap,
+  where the exclusivity flow (§9.2) programmatically clears the old reaction and
+  Discord echoes it back as a fresh `on_raw_reaction_remove`. A narrow cache-lag race
+  can still let a duplicate through — the API call is idempotent so it's harmless when
+  it does, and the log noise self-heals on the next event.
 
 ---
 

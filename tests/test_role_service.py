@@ -282,11 +282,13 @@ class FakeSignupMember:
         id: int,
         guild: FakeGuild,
         *,
+        roles: tuple[FakeRole, ...] = (),
         forbid_add: bool = False,
         forbid_remove: bool = False,
     ) -> None:
         self.id = id
         self.guild = guild
+        self.roles = list(roles)
         self.forbid_add = forbid_add
         self.forbid_remove = forbid_remove
         self.added: list[FakeRole] = []
@@ -297,12 +299,16 @@ class FakeSignupMember:
             resp = SimpleNamespace(status=403, reason="Forbidden")
             raise discord.Forbidden(resp, "missing Manage Roles")
         self.added.append(role)
+        if role not in self.roles:
+            self.roles.append(role)
 
     async def remove_roles(self, role: FakeRole, *, reason: str) -> None:
         if self.forbid_remove:
             resp = SimpleNamespace(status=403, reason="Forbidden")
             raise discord.Forbidden(resp, "missing Manage Roles")
         self.removed.append(role)
+        if role in self.roles:
+            self.roles.remove(role)
 
 
 def test_assign_role_adds_managed_role() -> None:
@@ -340,7 +346,7 @@ def test_assign_role_forbidden_returns_false() -> None:
 def test_remove_role_removes_managed_role() -> None:
     cheese = FakeRole(333, "cheese")
     guild = FakeGuild(111, roles=(cheese,))
-    member = FakeSignupMember(1, guild)
+    member = FakeSignupMember(1, guild, roles=(cheese,))
 
     ok = asyncio.run(remove_role(member, 333))
 
@@ -361,9 +367,31 @@ def test_remove_role_unknown_role_is_noop() -> None:
 def test_remove_role_forbidden_returns_false() -> None:
     cheese = FakeRole(333, "cheese")
     guild = FakeGuild(111, roles=(cheese,))
-    member = FakeSignupMember(1, guild, forbid_remove=True)
+    member = FakeSignupMember(1, guild, roles=(cheese,), forbid_remove=True)
 
     ok = asyncio.run(remove_role(member, 333))
 
     assert ok is False
+    assert member.removed == []
+
+
+def test_assign_role_already_held_short_circuits() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild, roles=(cheese,))
+
+    ok = asyncio.run(assign_role(member, 333))
+
+    assert ok is True
+    assert member.added == []
+
+
+def test_remove_role_not_held_short_circuits() -> None:
+    cheese = FakeRole(333, "cheese")
+    guild = FakeGuild(111, roles=(cheese,))
+    member = FakeSignupMember(1, guild)  # role exists in guild, not on member
+
+    ok = asyncio.run(remove_role(member, 333))
+
+    assert ok is True
     assert member.removed == []

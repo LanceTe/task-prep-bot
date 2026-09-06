@@ -22,17 +22,24 @@ class FakeRole:
 
 
 class FakeMember:
-    def __init__(self, id: int, guild: FakeGuild) -> None:
+    def __init__(
+        self, id: int, guild: FakeGuild, *, roles: tuple[FakeRole, ...] = ()
+    ) -> None:
         self.id = id
         self.guild = guild
+        self.roles = list(roles)
         self.added: list[FakeRole] = []
         self.removed: list[FakeRole] = []
 
     async def add_roles(self, role: FakeRole, *, reason: str) -> None:
         self.added.append(role)
+        if role not in self.roles:
+            self.roles.append(role)
 
     async def remove_roles(self, role: FakeRole, *, reason: str) -> None:
         self.removed.append(role)
+        if role in self.roles:
+            self.roles.remove(role)
 
 
 class FakeGuild:
@@ -86,10 +93,12 @@ def _wired_store(tmp_path: Path) -> StateStore:
     return store
 
 
-def _fixture(tmp_path: Path) -> tuple[ReactionRoles, FakeMember]:
+def _fixture(
+    tmp_path: Path, *, member_roles: tuple[FakeRole, ...] = ()
+) -> tuple[ReactionRoles, FakeMember]:
     cheese_role = FakeRole(ROLE_ID, "cheese")
     guild = FakeGuild(GUILD_ID, roles=(cheese_role,))
-    member = FakeMember(7, guild)
+    member = FakeMember(7, guild, roles=member_roles)
     guild.add_member(member)
     cog = ReactionRoles(FakeBot(_wired_store(tmp_path), guild))
     return cog, member
@@ -159,7 +168,8 @@ def test_add_ignores_reaction_on_other_message(tmp_path: Path) -> None:
 
 
 def test_remove_strips_role(tmp_path: Path) -> None:
-    cog, member = _fixture(tmp_path)
+    cheese = FakeRole(ROLE_ID, "cheese")
+    cog, member = _fixture(tmp_path, member_roles=(cheese,))
     # Remove events never carry payload.member, so the cog must resolve it.
     payload = _payload(user_id=member.id, member=None)
 

@@ -24,17 +24,24 @@ class FakeRole:
 
 
 class FakeMember:
-    def __init__(self, id: int, guild: FakeGuild) -> None:
+    def __init__(
+        self, id: int, guild: FakeGuild, *, roles: tuple[FakeRole, ...] = ()
+    ) -> None:
         self.id = id
         self.guild = guild
+        self.roles = list(roles)
         self.added: list[FakeRole] = []
         self.removed: list[FakeRole] = []
 
     async def add_roles(self, role: FakeRole, *, reason: str) -> None:
         self.added.append(role)
+        if role not in self.roles:
+            self.roles.append(role)
 
     async def remove_roles(self, role: FakeRole, *, reason: str) -> None:
         self.removed.append(role)
+        if role in self.roles:
+            self.roles.remove(role)
 
 
 class FakeGuild:
@@ -192,8 +199,10 @@ def test_setup_rejects_second_channel(tmp_path: Path) -> None:
 
 
 def test_apply_exclusive_colour_swaps_previous(tmp_path: Path) -> None:
-    guild = FakeGuild(GUILD_ID, roles=(FakeRole(555, "Red"), FakeRole(556, "Blue")))
-    member = FakeMember(7, guild)
+    red = FakeRole(555, "Red")
+    blue = FakeRole(556, "Blue")
+    guild = FakeGuild(GUILD_ID, roles=(red, blue))
+    member = FakeMember(7, guild, roles=(red,))
     message = FakeMessage(424)
 
     asyncio.run(apply_exclusive_colour(member, message, 556, others={555: "🔴"}))
