@@ -175,7 +175,7 @@ def build_embed(
     """
     lines = []
     for item in factory.items:
-        lines.append(f"{emojis_by_name[item.emoji_name]} — {item.role_name}")
+        lines.append(f"{emojis_by_name[item.emoji_name]} - {item.role_name}")
 
     embed = discord.Embed(title=factory.name, description="\n".join(lines))
 

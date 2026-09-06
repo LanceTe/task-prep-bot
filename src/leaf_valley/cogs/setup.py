@@ -132,7 +132,7 @@ class Setup(commands.Cog):
         latency_ms = round(self.bot.latency * 1000)
 
         lines = [
-            f"**Health — {guild.name}**",
+            f"**Health - {guild.name}**",
             f"Gateway latency: {latency_ms} ms",
             f"Configured: {len(factory_cfg.factories)} factories ",
             f"({item_count} items), {len(colour_cfg.colours)} colours",
@@ -186,7 +186,7 @@ class Setup(commands.Cog):
             self.bot.state.save()
 
         lines = [
-            f"**Create roles — {guild.name}**",
+            f"**Create roles - {guild.name}**",
             f"Created: {len(result.created)}",
             f"Adopted: {len(result.adopted)}",
             f"Already linked: {len(result.existing)}",
@@ -264,7 +264,7 @@ class Setup(commands.Cog):
             await interaction.followup.send(
                 f"⚠️ Factories are already set up in <#{result.channel_conflict}>.\n\n"
                 "I keep a single board per server, so I won’t post a second copy here. "
-                f"To move the board to {channel.mention}, first run `/teardown` — that "
+                f"To move the board to {channel.mention}, first run `/teardown` - that "
                 "**deletes the existing factory messages and every reaction on them**, "
                 "so only do it at the **end of a rally**. Then run `/setup-factories` "
                 "here.",
@@ -282,7 +282,7 @@ class Setup(commands.Cog):
             return
 
         lines = [
-            f"**Setup factories — {guild.name}**",
+            f"**Setup factories - {guild.name}**",
             f"Posted: {len(result.posted)}",
             f"Refreshed: {len(result.refreshed)}",
             f"Reactions seeded: {result.reactions_added}",
@@ -339,7 +339,7 @@ class Setup(commands.Cog):
             self.bot.state.save()
 
         lines = [
-            f"**Create colours — {guild.name}**",
+            f"**Create colours - {guild.name}**",
             f"Created: {len(result.created)}",
             f"Adopted: {len(result.adopted)}",
             f"Already linked: {len(result.existing)}",
@@ -413,7 +413,7 @@ class Setup(commands.Cog):
             return
 
         lines = [
-            f"**Setup colours — {guild.name}**",
+            f"**Setup colours - {guild.name}**",
             f"Posted: {'yes' if result.posted else 'no'}",
             f"Refreshed: {'yes' if result.refreshed else 'no'}",
             f"Reactions seeded: {result.reactions_added}",
@@ -477,7 +477,7 @@ class Setup(commands.Cog):
         timed_out = await view.wait()
         if timed_out:
             await interaction.edit_original_response(
-                content="Teardown timed out — nothing was deleted.", view=None
+                content="Teardown timed out - nothing was deleted.", view=None
             )
             return
         if not view.confirmed:
@@ -509,7 +509,7 @@ class Setup(commands.Cog):
             self.bot.state.save()
 
         lines = [
-            f"**Teardown — {guild.name}**",
+            f"**Teardown - {guild.name}**",
             f"Deleted: {result.deleted}",
             f"Already gone: {result.already_gone}",
         ]
@@ -552,7 +552,7 @@ class Setup(commands.Cog):
         has_roles = bool(self.bot.state.managed_role_ids(guild.id))
         if channel_id is None and not has_roles:
             await interaction.response.send_message(
-                "There's nothing to reset — run `/create-roles` and "
+                "There's nothing to reset - run `/create-roles` and "
                 "`/setup-factories` first.",
                 ephemeral=True,
             )
@@ -569,7 +569,7 @@ class Setup(commands.Cog):
             # Roles exist but the board was torn down; clear roles only.
             prompt = (
                 "This will **remove every item role from all members**. No factory "
-                "board is set up, so there are no reactions to reset — run "
+                "board is set up, so there are no reactions to reset - run "
                 "`/setup-factories` when you want the signup board back.\n\nProceed?"
             )
 
@@ -583,7 +583,7 @@ class Setup(commands.Cog):
         timed_out = await view.wait()
         if timed_out:
             await interaction.edit_original_response(
-                content="Reset timed out — nothing was changed.", view=None
+                content="Reset timed out - nothing was changed.", view=None
             )
             return
         if not view.confirmed:
@@ -612,7 +612,7 @@ class Setup(commands.Cog):
         role_result = await clear_all(guild, self.bot.state.managed_role_ids(guild.id))
 
         lines = [
-            f"**Reset — {guild.name}**",
+            f"**Reset - {guild.name}**",
             f"Roles cleared: {role_result.roles_cleared}",
             f"Members affected: {role_result.members_affected}",
         ]

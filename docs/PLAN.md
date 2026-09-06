@@ -1,4 +1,4 @@
-# Leaf Valley — Reaction Role Bot Plan
+# Leaf Valley - Reaction Role Bot Plan
 
 A Discord bot for a farming game community that assigns "item preparation" roles via
 reaction roles. Each **factory** has its own message; each **item** the factory can
@@ -42,19 +42,19 @@ than the only way to opt out, and lets users fix mistakes without pinging an adm
 Implementation: `on_raw_reaction_remove` → `role_service.remove_role` (see §7).
 
 ### Answering your API questions
-- **Create roles programmatically?** Yes — `guild.create_role(name=..., mentionable=True, ...)`.
-- **Upload emojis programmatically?** Yes — and we'll use **application-owned emojis**
+- **Create roles programmatically?** Yes - `guild.create_role(name=..., mentionable=True, ...)`.
+- **Upload emojis programmatically?** Yes - and we'll use **application-owned emojis**
   (`bot.create_application_emoji(name=..., image=<bytes>)`, added in discord.py 2.5)
   rather than guild-owned emojis. Application emojis are owned by the bot's application,
   work as reactions in any guild the bot is in, cap at **2000 per application** (vs. 50
   per guild), and require **no** "Manage Emojis" permission in the guild. Images still
   must be ≤ 256 KB. Run as a one-off **seed script**, not a weekly job (see §5a).
-- **Won't re-running the seed script duplicate emojis?** It would if done naively —
+- **Won't re-running the seed script duplicate emojis?** It would if done naively -
   Discord does **not** enforce unique emoji names, so uploading `cheese` twice yields two
   emojis. The seed script avoids this by being **idempotent**: it fetches the
   application's existing emojis (`bot.fetch_application_emojis()`) first and uploads
   only names that are missing (see §5a).
-- **Clear roles weekly?** Yes — a command iterates the managed roles and calls
+- **Clear roles weekly?** Yes - a command iterates the managed roles and calls
   `member.remove_roles(role)` for each holder (or clears every member of each role via
   `role.members`).
 
@@ -88,7 +88,7 @@ Discord Developer Portal setup:
 - Enable the **Server Members Intent** (needed to add/remove roles and enumerate members).
 - Invite with scopes `bot` + `applications.commands` and permissions:
   Manage Roles, Read Messages, Add Reactions, Read Message History.
-  (**No "Manage Emojis" needed** — application emojis are managed by the app itself, not
+  (**No "Manage Emojis" needed** - application emojis are managed by the app itself, not
   by any guild.)
 - The bot's own role must sit **above** every item role in the role hierarchy, or it
   cannot assign them.
@@ -167,7 +167,7 @@ leaf-valley/
 
 Instead of a `/upload-emojis` command, drop image files into `assets/emojis/` and run a
 standalone script that uploads them as **application-owned emojis**. The **filename
-(without extension) is the emoji name** — `cheese.png` becomes `:cheese:`. This matches
+(without extension) is the emoji name** - `cheese.png` becomes `:cheese:`. This matches
 the `emoji: ":cheese:"` references in `factories.yaml`.
 
 ### Why application emojis (not guild emojis)
@@ -210,7 +210,7 @@ uv run python scripts/seed_emojis.py
 
 Notes:
 - **Renaming** an emoji: rename the file *and* update its reference in `factories.yaml`.
-  The script won't rename existing emojis (it only adds missing ones) — add a
+  The script won't rename existing emojis (it only adds missing ones) - add a
   `--prune`/`--sync` flag later if you want it to delete emojis no longer backed by a file.
 - **Updating an image** under the same name: the script skips it (name exists). Delete
   the emoji via the Developer Portal or API (or add a `--force` flag) if you need to
@@ -272,7 +272,7 @@ factories:
 ## 5b. Factory message rendering (embeds + local images)
 
 Each factory message is a **Discord embed** for a clean, recognisable card. The factory
-image is a **local file attached to the message** — no external hosting, no dependency
+image is a **local file attached to the message** - no external hosting, no dependency
 on the Discord emoji system, and no re-upload needed because you're posting the messages
 once.
 
@@ -282,8 +282,8 @@ Layout per embed:
 - **Description:** a legend mapping each reaction to its item, e.g.
   ```
   React with an emoji to prep that item this week:
-  🧀 — cheese
-  🥛 — cream
+  🧀 - cheese
+  🥛 - cream
   ```
 - **Colour:** optional accent per factory (add `color: "#f5c542"` to the config later if
   wanted).
@@ -292,9 +292,9 @@ Posting flow (`factory_service`):
 
 The service exposes two small helpers that are composed by the two commands:
 
-- `post_factory_message(channel, factory)` — build the embed + attachment and send it.
+- `post_factory_message(channel, factory)` - build the embed + attachment and send it.
   Called only by `/setup-factories` (runs once ever).
-- `seed_reactions(message, items)` — add each item's emoji to a message as a reaction.
+- `seed_reactions(message, items)` - add each item's emoji to a message as a reaction.
   **Shared:** called by `/setup-factories` after posting *and* by `/reset-week` after
   `message.clear_reactions()`.
 
@@ -306,10 +306,10 @@ The service exposes two small helpers that are composed by the two commands:
 `/setup-factories` per factory:
 1. Build `discord.File(path=assets/factories/milk_factory.png, filename="milk_factory.png")`.
 2. Build `discord.Embed(title=..., description=...)` and call
-   `embed.set_image(url="attachment://milk_factory.png")` — this points the embed at the
+   `embed.set_image(url="attachment://milk_factory.png")` - this points the embed at the
    attached file without needing a public URL.
 3. `await channel.send(embed=embed, file=file)`.
-4. Call `seed_reactions(message, factory.items)` — unicode emoji directly, custom emoji
+4. Call `seed_reactions(message, factory.items)` - unicode emoji directly, custom emoji
    by ID resolved from the guild.
 5. Persist `message_id` in `state.json`.
 
@@ -317,7 +317,7 @@ Notes:
 - **`image` is optional (`Optional[str]`).** Some factories have no artwork (e.g.
   `collection`, which isn't a real in-game building). When `image` is `null`, skip the
   `discord.File` attachment and the `embed.set_image()` call and post an embed with no
-  picture — do **not** fall back to a `placeholder.png`, as opening a missing file raises
+  picture - do **not** fall back to a `placeholder.png`, as opening a missing file raises
   `FileNotFoundError`. The config schema must type `image` as optional and `post_factory_message`
   must guard the attachment on it.
 - **Local file vs. URL:** local attachment is chosen because you'll run setup once, and
@@ -327,7 +327,7 @@ Notes:
   and edit the embed in place.
 - **Embed image size limits:** Discord accepts up to 8 MB per attachment on non-boosted
   servers; keep factory pictures well under that (a few hundred KB is plenty).
-- **These images are unrelated to the emoji seed script** — `assets/emojis/` feeds
+- **These images are unrelated to the emoji seed script** - `assets/emojis/` feeds
   guild custom emojis (used as reactions), while `assets/factories/` feeds embed images.
 
 ---
@@ -346,7 +346,7 @@ Restrict these to the leadership team via
 `@app_commands.checks.has_role(settings.ADMIN_ROLE_NAME)` (a role named `LT` by
 default, overridable with the `ADMIN_ROLE_NAME` env var).
 
-Custom-emoji upload is **not** a command — it's the `scripts/seed_emojis.py` seed script
+Custom-emoji upload is **not** a command - it's the `scripts/seed_emojis.py` seed script
 (§5a). Typical first-run order: `uv run python scripts/seed_emojis.py` → `/create-roles`
 → `/setup-factories`.
 
@@ -390,7 +390,7 @@ Removing the reaction triggers `on_raw_reaction_remove` → `role_service.remove
 
 > Interaction with the reaction listeners: `clear_reactions()` fires a single
 > `on_raw_reaction_clear` event (not per-user removes), so the `reaction_roles` cog
-> just ignores that event — no "reset in progress" flag needed. The bot's own
+> just ignores that event - no "reset in progress" flag needed. The bot's own
 > re-seeded reactions are ignored by the add listener as usual
 > (`payload.user_id == bot.user.id`).
 
@@ -408,7 +408,7 @@ Removing the reaction triggers `on_raw_reaction_remove` → `role_service.remove
   no API call, no log. This suppresses the duplicate log line during a colour swap,
   where the exclusivity flow (§9.2) programmatically clears the old reaction and
   Discord echoes it back as a fresh `on_raw_reaction_remove`. A narrow cache-lag race
-  can still let a duplicate through — the API call is idempotent so it's harmless when
+  can still let a duplicate through - the API call is idempotent so it's harmless when
   it does, and the log noise self-heals on the next event.
 
 ---
@@ -429,14 +429,14 @@ would muddy both. The differences drive the design:
 
 | Aspect | Item roles (§1–§8) | Colour roles (§9) |
 |--------|--------------------|-------------------|
-| Selection | **Additive** — prep many items at once | **Exclusive** — one colour at a time |
-| Mentionable | Yes, so a lead can `@ping` preppers | **No** — a colour is never pinged |
+| Selection | **Additive** - prep many items at once | **Exclusive** - one colour at a time |
+| Mentionable | Yes, so a lead can `@ping` preppers | **No** - a colour is never pinged |
 | Emoji | Custom application emojis, matched by `emoji_id` | **Unicode** (🔴🟠🟡🟢🔵🟣), matched by name |
-| Weekly reset | Yes — it's a rally signup | **No** — it's a personal preference |
+| Weekly reset | Yes - it's a rally signup | **No** - it's a personal preference |
 | Board | One message per factory | **One** picker message total |
 
 So colours get their own config file, schema, service and cog, and their own slice of
-state — mirroring the existing structure rather than threading `if is_colour` branches
+state - mirroring the existing structure rather than threading `if is_colour` branches
 through it.
 
 ### 9.2 Exclusivity (pick one colour)
@@ -449,14 +449,14 @@ through it.
    choice.
 
 Removing a reaction in step 3 fires `on_raw_reaction_remove`, which removes the
-corresponding role — but that role is already gone from step 2, so it's a harmless
+corresponding role - but that role is already gone from step 2, so it's a harmless
 idempotent no-op (no loops, no "in-progress" flag needed). Un-reacting a colour with no
 replacement simply removes that colour role, leaving the member on Discord's default
 colour.
 
 > Alternative considered: **additive** colour roles (let a member hold several and let
 > Discord show only the highest). Simpler to implement (identical to the item flow) but
-> confusing — the board would show a member reacted to three colours while only one
+> confusing - the board would show a member reacted to three colours while only one
 > shows. Rejected in favour of the single-choice UX above.
 
 ### 9.3 Configuration format
@@ -478,7 +478,7 @@ colours:
 
 Validation (in the loader, failing loudly like `factories.yaml`):
 - `key` unique and non-empty; `role_name` non-empty.
-- `emoji` a **unicode** emoji (not a `:name:` reference — colour reactions don't use
+- `emoji` a **unicode** emoji (not a `:name:` reference - colour reactions don't use
   application emojis, so matching is by the unicode character).
 - `colour` a valid `#RRGGBB` hex string; rejected otherwise.
 - Reject duplicate `emoji` values (two colours can't share a reaction) and cap the list
@@ -500,28 +500,28 @@ Extend `GuildState` with an optional colour slice, written by `/setup-colours` a
 New store helpers (mirroring the factory ones, guild-scoped, reads never create):
 - `set_colour_channel_id` / `set_colour_message_id` / `set_colour_role_id`.
 - `get_colour_message_id(guild_id)` and `get_colour_channel_id(guild_id)`.
-- `colour_role_id_for_reaction(guild_id, message_id, emoji_name, config)` — returns the
+- `colour_role_id_for_reaction(guild_id, message_id, emoji_name, config)` - returns the
   role ID when `message_id` is the colour board and `emoji_name` matches a configured
   colour's unicode emoji. Unlike items this matches on the **unicode character** (via the
   config), so no `emoji_id` is stored.
-- `managed_colour_role_ids(guild_id)` — for the "remove other colours" step in §9.2.
+- `managed_colour_role_ids(guild_id)` - for the "remove other colours" step in §9.2.
 
-### 9.5 Service — `colour_service.py`
+### 9.5 Service - `colour_service.py`
 
 Pure-ish logic against the Discord API, matching `role_service`/`factory_service`
-conventions (mutates the in-memory `StateStore`, never saves — the cog persists once):
+conventions (mutates the in-memory `StateStore`, never saves - the cog persists once):
 
-- `create_missing_colour_roles(guild, config, store)` — idempotent create/adopt of each
+- `create_missing_colour_roles(guild, config, store)` - idempotent create/adopt of each
   colour role, created with `colour=discord.Colour(int(hex, 16))` and
   `mentionable=False`. Same existing/adopted/created outcomes and `discord.Forbidden`
   handling as `create_missing_roles`.
-- `setup_colour_board(guild, channel, config, store)` — post or refresh the single
-  colour board embed (title + a legend line `🔴 — Red` per colour) and seed its unicode
+- `setup_colour_board(guild, channel, config, store)` - post or refresh the single
+  colour board embed (title + a legend line `🔴 - Red` per colour) and seed its unicode
   reactions via a shared `seed_colour_reactions` helper. Enforces one board per guild
   like `setup_factories`. No image attachment and no emoji-resolution step (unicode
   emojis need no upload).
 
-### 9.6 Cog — `colour_roles.py`
+### 9.6 Cog - `colour_roles.py`
 
 A second thin cog with raw reaction listeners, separate from `reaction_roles` so each
 stays focused. Both cogs receive every reaction event; each ignores anything that isn't
@@ -539,9 +539,9 @@ Register it in `bot.py`'s `INITIAL_COGS`.
 
 ### 9.7 Commands (in `cogs/setup.py`, reusing the admin guard)
 
-- `/create-colours` — create/link missing colour roles; report created/adopted/existing
+- `/create-colours` - create/link missing colour roles; report created/adopted/existing
   counts and any `Forbidden`, same shape as `/create-roles`.
-- `/setup-colours` — post/refresh the colour board in the current channel and seed its
+- `/setup-colours` - post/refresh the colour board in the current channel and seed its
   reactions; same single-board and permission handling as `/setup-factories`.
 
 First-run order for this feature: `/create-colours` → `/setup-colours`.
@@ -559,7 +559,7 @@ decision, called out so a future change doesn't silently wipe members' colours.
 - **Role hierarchy:** the bot's role must sit above the colour roles to assign them;
   `discord.Forbidden` is caught and logged with the same actionable message as items.
 - **Colour vs. other coloured roles:** if a member already has a higher coloured role
-  (e.g. a staff role), that still wins — expected Discord behaviour, documented so it
+  (e.g. a staff role), that still wins - expected Discord behaviour, documented so it
   isn't reported as a bug.
 - **Emoji edited in config:** changing a colour's `emoji` after setup means the old
   reaction no longer maps; re-run `/setup-colours` (it re-seeds) and old reactions become
@@ -586,7 +586,7 @@ decision, called out so a future change doesn't silently wipe members' colours.
 ## Logging
 
 Log to a single text file so ops can grep, tail, and archive it, with the console
-stream preserved for interactive/dev use. **Not** a file-per-level split — every entry
+stream preserved for interactive/dev use. **Not** a file-per-level split - every entry
 already carries `%(levelname)s`, so `grep ERROR logs/leaf-valley.log` beats a second
 file that fragments the timeline of an incident.
 
@@ -595,13 +595,13 @@ file that fragments the timeline of an incident.
 - New directory `logs/` at repo root, git-ignored (mirrors `data/`). Path overridable
   via `LOG_DIR` env var so the systemd unit can point it at `/var/log/leaf-valley/`
   in production.
-- One append-only file: `logs/leaf-valley.log`. **No automatic rotation** — the bot is
+- One append-only file: `logs/leaf-valley.log`. **No automatic rotation** - the bot is
   used sparingly (KB/week, not MB/day), so a growing single file is easier to `mv`,
   `gzip`, or `truncate` by hand than a rotated set. If runaway growth ever becomes a
   concern, swapping the `FileHandler` for a
   `RotatingFileHandler(maxBytes=5_000_000, backupCount=5)` is a one-line change and
   caps disk at ~25 MB without imposing a retention window.
-- Console handler on `stderr` kept as well — cheap, and journald picks it up if you
+- Console handler on `stderr` kept as well - cheap, and journald picks it up if you
   ever want to double-check via `journalctl -u leaf-valley`.
 
 ### `src/leaf_valley/logging_config.py`
@@ -616,7 +616,7 @@ Single function `configure_logging(settings)` called once from `__main__.py` **b
 5. Silences noisy third parties: `logging.getLogger("discord").setLevel(WARNING)` (plus
    `discord.http` and `discord.gateway`).
 
-Every existing `log = logging.getLogger(__name__)` continues to work unchanged —
+Every existing `log = logging.getLogger(__name__)` continues to work unchanged -
 **no edits to any cog or service** are required to route their output to the file. The
 extra INFO lines discussed separately (lifecycle events, admin-command audit) can be
 added incrementally without touching this module.
@@ -664,7 +664,7 @@ it installs its own `StreamHandler` and every line prints twice.
 
 - **Canonical sink:** the text file at `$LOG_DIR/leaf-valley.log`. Journald picks up
   stderr as a convenience for `journalctl -u leaf-valley`, but it is **not** canonical
-  — journald has its own retention (`SystemMaxUse=`, `MaxRetentionSec=` in
+  - journald has its own retention (`SystemMaxUse=`, `MaxRetentionSec=` in
   `journald.conf`) and will silently roll off oldest entries. The file is under your
   control and stays until you decide to prune it.
 - **Lifecycle:** `systemctl stop`, `systemctl disable`, `systemctl disable --now`,
@@ -672,12 +672,12 @@ it installs its own `StreamHandler` and every line prints twice.
   entries intact. `LogsDirectory=` is in systemd's persistent family (unlike
   `RuntimeDirectory=`). Only three things delete logs: journald retention rolling off,
   a manual `journalctl --vacuum-*`, or you removing `/var/log/leaf-valley/` by hand.
-- **Migrating servers:** the file is portable — no journal export needed.
+- **Migrating servers:** the file is portable - no journal export needed.
   1. On the new host: install the service; first start creates `/var/log/leaf-valley/`.
   2. `systemctl stop leaf-valley` on the new host.
   3. `scp old:/var/log/leaf-valley/leaf-valley.log new:/var/log/leaf-valley/`.
   4. `chown <service-user>:<service-group> /var/log/leaf-valley/leaf-valley.log`.
-  5. `systemctl start leaf-valley` — it reopens the file in append mode.
+  5. `systemctl start leaf-valley` - it reopens the file in append mode.
   6. On the old host, once satisfied: `systemctl disable --now leaf-valley`, optionally
      `rm` the unit file + `daemon-reload`, and optionally `rm -rf /var/log/leaf-valley/`.
 
@@ -687,7 +687,7 @@ it installs its own `StreamHandler` and every line prints twice.
   you to open three files with interleaved timestamps. `grep -E 'ERROR|WARNING'` on one
   file gives the same view without splitting the story.
 - **Daily/time-based rotation.** Its purpose is bounded retention (delete files older
-  than N days), which is the opposite of what's wanted here — you want to keep
+  than N days), which is the opposite of what's wanted here - you want to keep
   everything until you choose to archive.
 - **JSON logs.** Overkill until there's a log aggregator downstream; add later by
   swapping the `Formatter`.
@@ -708,7 +708,7 @@ extra INFO lines being added to services/cogs.
 3. **State store:** JSON read/write + tests.
 4. **Role service + `/create-roles`.**
 5. **Factory service + `/setup-factories`** (post messages, seed reactions).
-6. **Reaction roles cog** (add/remove listeners) — end-to-end reaction → role works.
+6. **Reaction roles cog** (add/remove listeners) - end-to-end reaction → role works.
 7. **Admin `/reset-week`** with confirmation.
 8. **Emoji seed script** `scripts/seed_emojis.py` + `emoji_service` (idempotent upload).
 9. **Polish:** optional scheduler, logging, README.
@@ -718,9 +718,9 @@ extra INFO lines being added to services/cogs.
 ## 10. Open questions for you
 
 1. Single guild/server, or should this support multiple servers? (Single is much simpler
-   — the plan assumes single.)
+   - the plan assumes single.)
 2. Weekly reset: manual command only, or auto-scheduled (which day/time/timezone)?
 3. Custom emojis: do you already have image files, or will you mostly use built-in
    unicode emoji? (Affects how soon you need the seed script.) Do you want a
    `--sync`/`--prune` flag to delete emojis whose file was removed?
-4. Who can run admin commands — anyone with Manage Server, or a specific role?
+4. Who can run admin commands - anyone with Manage Server, or a specific role?

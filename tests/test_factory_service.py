@@ -291,7 +291,7 @@ def test_different_channel_is_reported_as_conflict(tmp_path: Path) -> None:
     assert result.posted == []
     assert result.changed is False
     assert channel.sent == []
-    # The recorded channel is left untouched — no silent move.
+    # The recorded channel is left untouched - no silent move.
     assert store.get_channel_id(111) == 99
 
 

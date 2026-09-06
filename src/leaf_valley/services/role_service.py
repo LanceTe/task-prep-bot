@@ -136,7 +136,7 @@ async def _ensure_mentionable(role: discord.Role, result: RoleSyncResult) -> Non
     """Make a managed role @mentionable so pinging it notifies its members.
 
     Freshly created roles already set this, but roles that were adopted or created
-    before this was enforced may not be mentionable — and Discord silently skips the
+    before this was enforced may not be mentionable - and Discord silently skips the
     notification when a non-mentionable role is pinged. A permission denial is logged
     and swallowed so it never blocks role linking.
     """

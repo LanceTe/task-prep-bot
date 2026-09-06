@@ -140,7 +140,7 @@ async def setup_colour_board(
     """Post or refresh the single colour board in ``channel`` and seed its reactions.
 
     Enforces one board per guild: if a board already exists in a different channel,
-    returns early with ``channel_conflict`` set. Idempotent — an existing message is
+    returns early with ``channel_conflict`` set. Idempotent - an existing message is
     edited in place and its reactions re-seeded rather than reposted.
     """
     result = ColourBoardResult()
@@ -181,7 +181,7 @@ def build_embed(config: ColourConfig) -> discord.Embed:
     """Build the colour board embed: a header plus one legend line per colour."""
     lines = [DESCRIPTION_HEADER, ""]
     for colour in config.colours:
-        lines.append(f"{colour.emoji} — {colour.role_name}")
+        lines.append(f"{colour.emoji} - {colour.role_name}")
     return discord.Embed(title="Name colours", description="\n".join(lines))
 
 
@@ -204,7 +204,7 @@ async def apply_exclusive_colour(
 
     ``others`` maps each other colour role ID the member currently holds to its board
     emoji. Removing a member's reaction fires on_raw_reaction_remove, which strips the
-    matching role — already gone here, so it's a harmless idempotent no-op.
+    matching role - already gone here, so it's a harmless idempotent no-op.
     """
     await role_service.assign_role(member, chosen_role_id)
     for role_id, emoji in others.items():

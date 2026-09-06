@@ -2,12 +2,12 @@
 
 Reacting with an item's emoji on its factory message grants the matching role;
 removing the reaction removes it (see PLAN §7). Raw events are used so the mappings
-survive a bot restart — cached ``on_reaction_*`` events only fire for messages the
+survive a bot restart - cached ``on_reaction_*`` events only fire for messages the
 bot saw this session, whereas the factory board is long-lived.
 
 The cog is thin: it maps (message, emoji) back to a role via the state store, then
-delegates to role_service. Anything that isn't a managed reaction — the bot's own
-seed reactions, unicode emojis, reactions on other messages, DMs — is ignored.
+delegates to role_service. Anything that isn't a managed reaction - the bot's own
+seed reactions, unicode emojis, reactions on other messages, DMs - is ignored.
 """
 
 from __future__ import annotations
