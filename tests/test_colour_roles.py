@@ -47,6 +47,7 @@ class FakeMember:
 class FakeGuild:
     def __init__(self, id: int, roles: tuple[FakeRole, ...] = ()) -> None:
         self.id = id
+        self.name = f"guild-{id}"
         self._roles = {role.id: role for role in roles}
         self._members: dict[int, FakeMember] = {}
 

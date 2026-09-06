@@ -110,9 +110,10 @@ class Setup(commands.Cog):
             return
 
         log.info(
-            "/healthz invoked by %s (%s) in guild %s",
+            "/healthz invoked by %s (%s) in guild %s (%s)",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
         )
         state = self.bot.state
@@ -180,9 +181,10 @@ class Setup(commands.Cog):
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         log.info(
-            "/create-roles invoked by %s (%s) in guild %s",
+            "/create-roles invoked by %s (%s) in guild %s (%s)",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
         )
         result = await create_missing_roles(
@@ -249,9 +251,10 @@ class Setup(commands.Cog):
         emojis_by_name = {emoji.name: emoji for emoji in emojis}
 
         log.info(
-            "/setup-factories invoked by %s (%s) in guild %s channel %s",
+            "/setup-factories invoked by %s (%s) in guild %s (%s) channel %s",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
             channel.id,
         )
@@ -333,9 +336,10 @@ class Setup(commands.Cog):
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         log.info(
-            "/create-colours invoked by %s (%s) in guild %s",
+            "/create-colours invoked by %s (%s) in guild %s (%s)",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
         )
         result = await create_missing_colour_roles(
@@ -397,9 +401,10 @@ class Setup(commands.Cog):
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         log.info(
-            "/setup-colours invoked by %s (%s) in guild %s channel %s",
+            "/setup-colours invoked by %s (%s) in guild %s (%s) channel %s",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
             channel.id,
         )
@@ -490,9 +495,10 @@ class Setup(commands.Cog):
             return  # the Cancel button already updated the message
 
         log.info(
-            "/teardown confirmed by %s (%s) in guild %s channel %s",
+            "/teardown confirmed by %s (%s) in guild %s (%s) channel %s",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
             channel_id,
         )
@@ -596,9 +602,10 @@ class Setup(commands.Cog):
             return  # the Cancel button already updated the message
 
         log.info(
-            "/reset confirmed by %s (%s) in guild %s",
+            "/reset confirmed by %s (%s) in guild %s (%s)",
             interaction.user.display_name,
             interaction.user.id,
+            guild.name,
             guild.id,
         )
         emojis = await self.bot.fetch_application_emojis()

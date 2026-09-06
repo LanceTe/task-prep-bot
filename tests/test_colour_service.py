@@ -48,6 +48,7 @@ class FakeMember:
 class FakeGuild:
     def __init__(self, id: int, roles: tuple[FakeRole, ...] = ()) -> None:
         self.id = id
+        self.name = f"guild-{id}"
         self.roles = list(roles)
         self.created: list[tuple[str, int, bool]] = []
         self._next_id = id * 1000

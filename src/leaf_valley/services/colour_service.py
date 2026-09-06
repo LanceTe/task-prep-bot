@@ -109,7 +109,8 @@ async def create_missing_colour_roles(
             )
         except discord.Forbidden:
             log.error(
-                "Missing 'Manage Roles' in guild %s; cannot create colour role %r.",
+                "Missing 'Manage Roles' in guild %s (%s); cannot create colour role %r.",
+                guild.name,
                 guild.id,
                 colour.role_name,
             )
@@ -122,7 +123,8 @@ async def create_missing_colour_roles(
         result.created.append(colour.role_name)
 
     log.info(
-        "Colour role sync in guild %s: created=%d adopted=%d existing=%d.",
+        "Colour role sync in guild %s (%s): created=%d adopted=%d existing=%d.",
+        guild.name,
         guild.id,
         len(result.created),
         len(result.adopted),
@@ -167,7 +169,8 @@ async def setup_colour_board(
 
     if result.changed:
         log.info(
-            "Colour board in guild %s channel %s: posted=%s refreshed=%s reactions=%d.",
+            "Colour board in guild %s (%s) channel %s: posted=%s refreshed=%s reactions=%d.",
+            guild.name,
             guild.id,
             getattr(channel, "id", "?"),
             result.posted,
@@ -213,9 +216,10 @@ async def apply_exclusive_colour(
             await message.remove_reaction(emoji, member)
         except (discord.Forbidden, discord.NotFound):
             log.warning(
-                "Could not clear old colour reaction %s for member %s in guild %s.",
+                "Could not clear old colour reaction %s for member %s in guild %s (%s).",
                 emoji,
                 member.id,
+                member.guild.name,
                 member.guild.id,
             )
 

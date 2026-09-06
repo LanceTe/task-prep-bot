@@ -110,7 +110,8 @@ async def create_missing_roles(
                 )
             except discord.Forbidden:
                 log.error(
-                    "Missing 'Manage Roles' in guild %s; cannot create role %r.",
+                    "Missing 'Manage Roles' in guild %s (%s); cannot create role %r.",
+                    guild.name,
                     guild.id,
                     item.role_name,
                 )
@@ -123,7 +124,8 @@ async def create_missing_roles(
             result.created.append(item.role_name)
 
     log.info(
-        "Role sync in guild %s: created=%d adopted=%d existing=%d.",
+        "Role sync in guild %s (%s): created=%d adopted=%d existing=%d.",
+        guild.name,
         guild.id,
         len(result.created),
         len(result.adopted),
@@ -146,8 +148,9 @@ async def _ensure_mentionable(role: discord.Role, result: RoleSyncResult) -> Non
         await role.edit(mentionable=True, reason=ROLE_CREATE_REASON)
     except discord.Forbidden:
         log.error(
-            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s (%s); "
             "cannot make role %r mentionable.",
+            role.guild.name,
             role.guild.id,
             role.name,
         )
@@ -178,8 +181,9 @@ async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult
                 await member.remove_roles(role, reason=ROLE_CLEAR_REASON)
             except discord.Forbidden:
                 log.error(
-                    "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+                    "Missing 'Manage Roles' (or role hierarchy too low) in guild %s (%s); "
                     "cannot remove role %r.",
+                    guild.name,
                     guild.id,
                     role.name,
                 )
@@ -190,9 +194,10 @@ async def clear_all(guild: discord.Guild, role_ids: set[int]) -> RoleClearResult
 
     result.members_affected = len(affected)
     log.info(
-        "Cleared %d role(s) from %d member(s) in guild %s.",
+        "Cleared %d role(s) from %d member(s) in guild %s (%s).",
         result.roles_cleared,
         result.members_affected,
+        guild.name,
         guild.id,
     )
     return result
@@ -216,18 +221,20 @@ async def assign_role(member: discord.Member, role_id: int) -> bool:
         await member.add_roles(role, reason=ROLE_ASSIGN_REASON)
     except discord.Forbidden:
         log.error(
-            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s (%s); "
             "cannot add role %r to member %s.",
+            member.guild.name,
             member.guild.id,
             role.name,
             member.id,
         )
         return False
     log.info(
-        "Assigned role %r to %s (%s) in guild %s.",
+        "Assigned role %r to %s (%s) in guild %s (%s).",
         role.name,
         member.display_name,
         member.id,
+        member.guild.name,
         member.guild.id,
     )
     return True
@@ -250,18 +257,20 @@ async def remove_role(member: discord.Member, role_id: int) -> bool:
         await member.remove_roles(role, reason=ROLE_REMOVE_REASON)
     except discord.Forbidden:
         log.error(
-            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s; "
+            "Missing 'Manage Roles' (or role hierarchy too low) in guild %s (%s); "
             "cannot remove role %r from member %s.",
+            member.guild.name,
             member.guild.id,
             role.name,
             member.id,
         )
         return False
     log.info(
-        "Removed role %r from %s (%s) in guild %s.",
+        "Removed role %r from %s (%s) in guild %s (%s).",
         role.name,
         member.display_name,
         member.id,
+        member.guild.name,
         member.guild.id,
     )
     return True

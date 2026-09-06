@@ -152,7 +152,8 @@ async def setup_factories(
 
     if result.changed:
         log.info(
-            "Factory setup in guild %s channel %s: posted=%d refreshed=%d reactions=%d.",
+            "Factory setup in guild %s (%s) channel %s: posted=%d refreshed=%d reactions=%d.",
+            guild.name,
             guild.id,
             getattr(channel, "id", "?"),
             len(result.posted),
@@ -261,7 +262,8 @@ async def reset_reactions(
         result.messages_reset += 1
 
     log.info(
-        "Factory reactions reset in guild %s channel %s: messages=%d reactions=%d already_gone=%d.",
+        "Factory reactions reset in guild %s (%s) channel %s: messages=%d reactions=%d already_gone=%d.",
+        guild.name,
         guild.id,
         getattr(channel, "id", "?"),
         result.messages_reset,
@@ -311,7 +313,8 @@ async def teardown_factories(
 
     store.reset_setup(guild.id)
     log.info(
-        "Factory teardown in guild %s channel %s: deleted=%d already_gone=%d.",
+        "Factory teardown in guild %s (%s) channel %s: deleted=%d already_gone=%d.",
+        guild.name,
         guild.id,
         getattr(channel, "id", "?"),
         result.deleted,

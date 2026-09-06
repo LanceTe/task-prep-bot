@@ -116,7 +116,7 @@ def _emojis() -> dict[str, FakeEmoji]:
 
 
 def _guild(id: int = 111) -> SimpleNamespace:
-    return SimpleNamespace(id=id)
+    return SimpleNamespace(id=id, name=f"guild-{id}")
 
 
 def _store(tmp_path: Path) -> StateStore:

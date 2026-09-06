@@ -55,6 +55,7 @@ class FakeGuild:
         forbid_create: bool = False,
     ) -> None:
         self.id = id
+        self.name = f"guild-{id}"
         self.roles = list(roles)
         self.forbid_create = forbid_create
         self.created: list[tuple[str, bool, str]] = []
